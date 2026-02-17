@@ -50,31 +50,41 @@ const getRoleColor = (role?: string) => {
 };
 
 export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernAgendaProps) {
-  const [selectedDate, setSelectedDate] = useState(startOfToday());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<"AGENDA" | "PENDING">("AGENDA");
+  const [days, setDays] = useState<Date[]>([]);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
+  useEffect(() => {
+    const start = startOfWeek(addDays(new Date(), weekOffset * 7), { weekStartsOn: 1 });
+    const generatedDays = Array.from({ length: 7 }).map((_, i) => addDays(start, i));
+    setDays(generatedDays);
+    
+    // Auto-select today on first mount if we are in current week
+    if (!selectedDate && weekOffset === 0) {
+      setSelectedDate(startOfToday());
+    }
+  }, [weekOffset]);
+
   // Calculate stats
   const pendingCount = useMemo(() => meetings.filter(m => m.myStatus === "ESPERANDO").length, [meetings]);
 
-  const days = useMemo(() => {
-    const start = startOfWeek(addDays(new Date(), weekOffset * 7), { weekStartsOn: 1 });
-    return Array.from({ length: 7 }).map((_, i) => addDays(start, i));
-  }, [weekOffset]);
-
   const filteredMeetings = useMemo(() => {
+    if (!selectedDate && activeTab === "AGENDA") return [];
     if (activeTab === "PENDING") {
       return meetings.filter(m => m.myStatus === "ESPERANDO");
     }
-    return meetings.filter(m => isSameDay(new Date(m.startDatetime), selectedDate))
-      .sort((a, b) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime());
+    return meetings.filter(m => {
+        if (!selectedDate) return false;
+        return isSameDay(new Date(m.startDatetime), selectedDate);
+    }).sort((a, b) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime());
   }, [meetings, selectedDate, activeTab]);
 
   useEffect(() => {
-    if (activeTab === "AGENDA") {
+    if (activeTab === "AGENDA" && selectedDate) {
         const selectedIndex = days.findIndex(day => isSameDay(day, selectedDate));
         if (selectedIndex !== -1 && itemRefs.current[selectedIndex]) {
         itemRefs.current[selectedIndex]?.scrollIntoView({
@@ -97,11 +107,15 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter leading-tight">
                 {activeTab === "AGENDA" ? (
                     <>
-                        {isSameDay(selectedDate, new Date()) && (
+                        {selectedDate && isSameDay(selectedDate, new Date()) && (
                             <span className="block text-red-600 text-[10px] uppercase tracking-[0.3em] font-black mb-1 animate-pulse">Hoy</span>
                         )}
-                        <span className="capitalize block">
-                            {format(selectedDate, "EEEE", { locale: es })} <span className="text-red-600">{format(selectedDate, "d")}</span>
+                         <span className="capitalize block">
+                            {selectedDate ? (
+                              <>
+                                {format(selectedDate, "EEEE", { locale: es })} <span className="text-red-600">{format(selectedDate, "d")}</span>
+                              </>
+                            ) : "Cargando..."}
                         </span>
                     </>
                 ) : (
@@ -165,7 +179,7 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
                   className="flex flex-1 items-end px-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth pb-4"
                 >
                   {days.map((day, idx) => {
-                    const isSelected = isSameDay(day, selectedDate);
+                    const isSelected = selectedDate && isSameDay(day, selectedDate); // Ensure selectedDate is not null
                     const isToday = isSameDay(day, new Date());
                     const hasMeetings = meetings.some(m => isSameDay(new Date(m.startDatetime), day));
                     

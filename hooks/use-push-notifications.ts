@@ -22,17 +22,25 @@ export function usePushNotifications() {
   }, []);
 
   const subscribeUser = useCallback(async () => {
-    if (!isSupported) return null;
+    alert("🔄 Iniciando proceso de suscripción...");
+    if (!isSupported) {
+      alert("❌ Tu navegador no soporta notificaciones (PushManager o ServiceWorker faltantes).");
+      return null;
+    }
 
     try {
+      alert("🔔 Solicitando permiso al navegador...");
       const result = await Notification.requestPermission();
       setPermission(result);
 
       if (result !== "granted") {
+        alert("⚠️ Permiso denegado o cerrado. (Estado: " + result + ")");
         throw new Error("Permission not granted for notifications");
       }
 
+      alert("📡 Conectando con Service Worker...");
       const registration = await navigator.serviceWorker.ready;
+      alert("✅ Service Worker listo. Obteniendo llave pública...");
       
       // We need a VAPID public key from the backend
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
