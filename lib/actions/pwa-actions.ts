@@ -34,8 +34,15 @@ export async function saveSubscriptionAction(subscription: any) {
 
     console.log("[PWA] Saving subscription for user:", session.username, "(", session.id, ")");
     
+    
     const subString = typeof subscription === 'string' ? subscription : JSON.stringify(subscription);
     
+    // Validate subscription object
+    if (!subString || subString === "{}" || subString.length < 50) {
+       console.error("[PWA] Invalid subscription payload:", subString);
+       return { success: false, error: "Invalid subscription payload" };
+    }
+
     const result = await db.update(users)
       .set({ pushSubscription: subString })
       .where(eq(users.id, session.id))
