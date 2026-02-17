@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FeedbackDialog } from "@/components/feedback-dialog";
 import {
   MapPin,
   Clock,
@@ -21,7 +22,7 @@ import {
   Monitor,
   X // Import X icon if needed, but Dialog usually has a Close button. The user asked to leave the X. Shadcn DialogContent usually includes a Close X. The custom header had a Plus. I will remove the Plus.
 } from "lucide-react";
-import { getUsers } from "@/lib/actions/users";
+import { getUsers, getUserById } from "@/lib/actions/users";
 import { createMeetingTransaction } from "@/lib/actions/work-logic";
 import { TimePickerSheet } from "./time-picker-sheet";
 import { format, addDays, startOfToday, parse, addMinutes, isSameDay } from "date-fns";
@@ -56,6 +57,13 @@ export function NewMeetingDialog({
     participantIds: [] as string[],
   });
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [feedback, setFeedback] = useState<{
+    open: boolean;
+    type: "success" | "error";
+    error?: string;
+  }>({ open: false, type: "success" });
+
   // Calculate future dates for the strip (next 14 days)
   const dateStrip = useMemo(() => {
     return Array.from({ length: 14 }).map((_, i) => addDays(startOfToday(), i));
@@ -64,6 +72,7 @@ export function NewMeetingDialog({
   useEffect(() => {
     if (open) {
       getUsers().then(setAvailableUsers);
+      getUserById(userId).then(setCurrentUser);
       setFormData({
         clientName: "",
         address: "",
@@ -122,13 +131,13 @@ export function NewMeetingDialog({
       });
 
       if (result.success) {
-        onOpenChange(false);
+        setFeedback({ open: true, type: "success" });
       } else {
-        alert(result.error);
+        setFeedback({ open: true, type: "error", error: result.error });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Error inesperado beim Speichern");
+      setFeedback({ open: true, type: "error", error: error.message || "Error inesperado" });
     } finally {
       setLoading(false);
     }
@@ -405,6 +414,29 @@ export function NewMeetingDialog({
         </form>
 
       </DialogContent>
+      
+      <FeedbackDialog 
+        open={feedback.open}
+        onOpenChange={(open) => {
+          setFeedback(prev => ({ ...prev, open }));
+          if (!open && feedback.type === "success") {
+            onOpenChange(false);
+          }
+        }}
+        type={feedback.type}
+        userName={currentUser?.name}
+        meetingName={formData.clientName}
+        errorMessage={feedback.error}
+        onPrimaryAction={() => {
+          setFeedback(prev => ({ ...prev, open: false }));
+          if (feedback.type === "success") {
+            onOpenChange(false);
+            // Redirección opcional a la agenda
+          } else {
+            // Reintento: simplemente cerramos el feedback y el formulario sigue ahí
+          }
+        }}
+      />
     </Dialog>
   );
 }
