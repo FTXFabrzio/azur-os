@@ -208,6 +208,33 @@ export async function updateParticipantStatus(meetingId: string, userId: string,
       }
     });
 
+    // 3.3 Trigger Notifications to Creator
+    try {
+        const meetingData = await db.query.meetings.findFirst({
+            where: eq(meetings.id, meetingId),
+            with: { creator: true }
+        });
+        const userData = await db.query.users.findFirst({
+            where: eq(users.id, userId)
+        });
+
+        if (meetingData?.creator?.pushSubscription) {
+            const title = status === "ACEPTADO" ? "✅ Participación Confirmada" : "❌ Participación Rechazada";
+            const body = status === "ACEPTADO" 
+                ? `${userData?.name} ha confirmado su participación en la reunión de ${meetingData.clientName}`
+                : `${userData?.name} ha señalado que esta ocupado al momento de la reunión de ${meetingData.clientName}`;
+            
+            console.log(`[Push] Sending status update to creator ${meetingData.creator.username}`);
+            sendPushNotification(meetingData.creator.pushSubscription, {
+                title,
+                body,
+                url: `/work`
+            });
+        }
+    } catch (err) {
+        console.error("[Push] Error sending status update notification:", err);
+    }
+
     revalidatePath("/work");
     return { success: true };
   } catch (error) {

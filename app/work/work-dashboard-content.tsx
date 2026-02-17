@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import useSWR from "swr";
-import { deleteMeetingAction } from "@/lib/actions/work-logic";
+import { deleteMeetingAction, updateParticipantStatus } from "@/lib/actions/work-logic";
 import { ModernAgenda } from "./modern-agenda";
 import { 
   Calendar as CalendarIcon, 
@@ -92,6 +92,19 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
     } catch (error) {
       console.error("Failed to delete:", error);
       mutate();
+    }
+  };
+
+  const handleStatusUpdate = async (meetingId: string, status: "ACEPTADO" | "RECHAZADO") => {
+    try {
+      const res = await updateParticipantStatus(meetingId, displayUser.id, status);
+      if (res.success) {
+        mutate();
+      } else {
+        alert("Error al actualizar estado: " + res.error);
+      }
+    } catch (error) {
+      console.error("Failed to update status:", error);
     }
   };
 
@@ -192,7 +205,11 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
             <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Calendario de Actividades</h2>
           </div>
           
-          <ModernAgenda meetings={augmentedMeetings as any} onEventClick={handleEventClick} />
+          <ModernAgenda 
+            meetings={augmentedMeetings as any} 
+            onEventClick={handleEventClick} 
+            onStatusUpdate={handleStatusUpdate}
+          />
         </div>
 
       </div>

@@ -228,7 +228,10 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
       <div className="space-y-4 px-1 relative z-10 pb-4">
         <AnimatePresence mode="popLayout">
           {filteredMeetings.length > 0 ? (
-            <div className="space-y-4">
+            <div className={cn(
+                "space-y-4 px-1",
+                activeTab === "PENDING" && "sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:space-y-0 sm:gap-4 lg:gap-6"
+            )}>
               {filteredMeetings.map((meeting) => (
                 <motion.div 
                   layout
@@ -237,7 +240,10 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
                   onClick={() => onEventClick(meeting.id)}
-                  className="bg-white rounded-[1.25rem] p-5 border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
+                  className={cn(
+                    "bg-white rounded-[1.25rem] p-5 border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer hover:shadow-md transition-all group relative overflow-hidden",
+                    activeTab === "PENDING" && "flex flex-col h-full bg-slate-50/30 border-slate-200/50"
+                  )}
                 >
                   {/* Status Strip */}
                   <div className={cn("absolute left-0 top-0 bottom-0 w-[3px]", getStatusColor(meeting.status))} />
@@ -277,27 +283,27 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
                     
                     {/* Inbox Action Footer (Only for Pending Tab) */}
                     {activeTab === "PENDING" && (
-                        <div className="mt-2 pt-4 border-t border-slate-50 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                        <div className="mt-auto pt-4 border-t border-slate-200/60 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
                              <Button 
                                size="sm"
                                variant="outline"
-                               className="flex-1 h-9 rounded-lg border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-red-600 font-bold text-xs"
+                               className="flex-1 h-10 rounded-xl border-slate-200/80 bg-white text-slate-600 hover:bg-red-50 hover:text-red-700 hover:border-red-100 font-black text-[10px] uppercase tracking-wider transition-all"
                                onClick={(e) => {
                                    e.stopPropagation();
                                    onStatusUpdate?.(meeting.id, "RECHAZADO");
                                }}
                              >
-                                 <XCircle className="h-3.5 w-3.5 mr-2" /> Rechazar
+                                 Rechazar
                              </Button>
                              <Button 
                                size="sm"
-                               className="flex-1 h-9 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-lg shadow-red-500/20"
+                               className="flex-[1.5] h-10 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-red-500/20 active:scale-95 transition-all"
                                onClick={(e) => {
                                    e.stopPropagation();
                                    onStatusUpdate?.(meeting.id, "ACEPTADO");
                                }}
                              >
-                                 <CheckCircle2 className="h-3.5 w-3.5 mr-2" /> Aceptar
+                                 Aceptar
                              </Button>
                         </div>
                     )}
