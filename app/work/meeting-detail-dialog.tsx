@@ -8,6 +8,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +63,7 @@ export function MeetingDetailDialog({
   const [meeting, setMeeting] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [msgContent, setMsgContent] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const refreshData = async () => {
     if (!meetingId) return;
@@ -90,13 +101,11 @@ export function MeetingDetailDialog({
       refreshData();
     }
   };
-
   const handleDelete = async () => {
     if (!meetingId || !onDelete) return;
-    if (confirm("¿Estás seguro de eliminar esta reunión?")) {
-      onDelete(meetingId);
-      onOpenChange(false);
-    }
+    onDelete(meetingId);
+    onOpenChange(false);
+    setShowDeleteConfirm(false);
   };
 
   if (!meeting) return null;
@@ -144,17 +153,15 @@ export function MeetingDetailDialog({
              </div>
           </div>
           
-          {/* Delete Button for Creator */}
-          {meeting.createdBy === userId && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDelete}
-              className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+          {/* Global Delete Button - Accessible to all participants */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </DialogHeader>
 
         {/* Banner de Confirmación Inteligente (Sticky) */}
@@ -315,6 +322,30 @@ export function MeetingDetailDialog({
           </div>
         </Tabs>
       </DialogContent>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="rounded-[2rem] border-none p-8 gap-6 max-w-[400px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
+              ¿Quitar de la agenda?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+              Esta acción limpiará el calendario de todo el equipo involucrado permanentemente. ¿Deseas continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-3">
+            <AlertDialogCancel className="rounded-2xl h-12 border-slate-100 bg-slate-50 text-slate-500 font-bold hover:bg-slate-100 flex-1">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete}
+              className="rounded-2xl h-12 bg-red-600 hover:bg-red-700 text-white font-bold flex-1 shadow-lg shadow-red-500/20"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

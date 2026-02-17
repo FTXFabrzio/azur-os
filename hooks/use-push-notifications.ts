@@ -39,7 +39,7 @@ export function usePushNotifications() {
       
       if (!vapidPublicKey) {
         console.error("NEXT_PUBLIC_VAPID_PUBLIC_KEY is missing");
-        // For development, we might use a dummy or just return the permission state
+        alert("🚨 Error Interno: Falta la llave VAPID pública. Contacta a soporte.");
         return null;
       }
 
@@ -50,15 +50,23 @@ export function usePushNotifications() {
 
       setSubscription(sub);
       
+      const subObj = sub.toJSON();
+      console.log("[PWA] Subscription object created:", subObj);
+
       // Save subscription to backend
-      const response = await saveSubscriptionAction(sub.toJSON() as any);
+      const response = await saveSubscriptionAction(subObj as any);
+      
       if (response.success) {
+        alert("✅ Notificaciones vinculadas con éxito.");
         console.log("Subscription saved to backend successfully");
+      } else {
+        alert("❌ Error al vincular: " + response.error);
       }
       
       return sub;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to subscribe user:", error);
+      alert("⚠️ Error de suscripción: " + (error.message || "Error desconocido"));
       return null;
     }
   }, [isSupported]);
