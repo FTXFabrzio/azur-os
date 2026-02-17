@@ -114,6 +114,9 @@ export default function PushDebugPage() {
         <button onClick={registerSW} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
             1. Register SW
         </button>
+        <button onClick={() => navigator.serviceWorker.register("/mock-sw.js").then(r => addLog("✅ MOCK Registered: " + r.scope)).catch(e => addLog("❌ MOCK Failed: " + e.message))} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+            1b. Register MOCK SW
+        </button>
         <button onClick={manualSubscribe} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
             2. Subscribe & Save
         </button>

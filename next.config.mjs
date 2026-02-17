@@ -4,7 +4,7 @@ const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
   swDest: "public/sw.js",
   reloadOnOnline: true,
-  disable: process.env.NODE_ENV === "development",
+  disable: false, // FORCE ENABLE ALWAYS FOR DEBUG
 });
 
 /** @type {import('next').NextConfig} */
