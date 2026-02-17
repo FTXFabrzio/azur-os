@@ -13,4 +13,6 @@ const nextConfig = {
   turbopack: {},
 };
 
-export default withSerwist(nextConfig);
+// Serwist disabled manually for now to avoid build failures with SW generation.
+// export default withSerwist(nextConfig);
+export default nextConfig;
