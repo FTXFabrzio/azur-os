@@ -168,15 +168,15 @@ export function ProfileConfigDialog({
           </div>
           <Button 
             size="sm" 
-            variant={permission === "granted" ? "ghost" : "default"}
-            disabled={permission === "granted" || !isSupported}
+            variant={"default"}
+            disabled={!isSupported}
             onClick={() => subscribeUser()}
             className={cn(
                "h-9 px-4 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all",
-               permission === "granted" ? "text-emerald-600 bg-emerald-100/50" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+               permission === "granted" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
             )}
           >
-            {permission === "granted" ? "Activo" : "Activar"}
+            {permission === "granted" ? "Re-vincular" : "Activar"}
           </Button>
         </div>
 
