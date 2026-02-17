@@ -122,12 +122,34 @@ export function usePushNotifications() {
   }, [subscription]);
 
   const hardReset = useCallback(async () => {
-    if (!subscription) return;
     try {
-      alert("🗑️ Eliminando suscripción del navegador...");
-      await subscription.unsubscribe();
+      const confirmed = confirm("⚠️ ¿Reset Nuclear? Esto eliminará el Service Worker y recargará la página.");
+      if (!confirmed) return;
+
+      alert("🗑️ Iniciando Reset Nuclear...");
+      
+      // 1. Unsubscribe from PushManager if possible (try-catch isolated)
+      try {
+        if (subscription) {
+            await subscription.unsubscribe();
+        } else {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) await sub.unsubscribe();
+        }
+      } catch (e) {
+        console.warn("Could not unsubscribe", e);
+      }
+
+      // 2. Unregister ALL Service Workers
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+      
       setSubscription(null);
-      alert("✅ Reset completo. Ahora presiona 'Activar' nuevamente.");
+      
+      alert("✅ Reset Completo. La página se recargará.");
       window.location.reload();
     } catch (err: any) {
       alert("❌ Error al resetear: " + err.message);
@@ -146,14 +168,19 @@ export function usePushNotifications() {
 }
 
 function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  try {
+      const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
 
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+  } catch (e) {
+    console.error("Error converting VAPID key:", e);
+    throw new Error("Invalid VAPID Key format");
   }
-  return outputArray;
 }
