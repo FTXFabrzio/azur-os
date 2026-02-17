@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ import {
   Monitor,
   X // Import X icon if needed, but Dialog usually has a Close button. The user asked to leave the X. Shadcn DialogContent usually includes a Close X. The custom header had a Plus. I will remove the Plus.
 } from "lucide-react";
-import { getUsers, getUserById } from "@/lib/actions/users";
+import { getAvailableParticipants, getUserById } from "@/lib/actions/users";
 import { createMeetingTransaction } from "@/lib/actions/work-logic";
 import { TimePickerSheet } from "./time-picker-sheet";
 import { format, addDays, startOfToday, parse, addMinutes, isSameDay } from "date-fns";
@@ -71,7 +72,7 @@ export function NewMeetingDialog({
 
   useEffect(() => {
     if (open) {
-      getUsers().then(setAvailableUsers);
+      getAvailableParticipants().then(setAvailableUsers);
       getUserById(userId).then(setCurrentUser);
       setFormData({
         clientName: "",
@@ -163,6 +164,9 @@ export function NewMeetingDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 sm:max-w-[500px] border-none shadow-2xl max-h-[90vh] flex flex-col overflow-hidden bg-white text-slate-900 rounded-[2rem]">
+        <DialogDescription className="sr-only">
+          Formulario para crear una nueva actividad operativa en la agenda.
+        </DialogDescription>
         
         {/* Header */}
         <DialogHeader className="bg-white px-6 pt-6 pb-2 shrink-0">

@@ -24,6 +24,30 @@ export async function getUsers() {
   }
 }
 
+/**
+ * Returns a list of users available to be invited to meetings.
+ * Accessible by any authenticated user, but stripped of sensitive data.
+ */
+export async function getAvailableParticipants() {
+  try {
+    const session = await getSession();
+    if (!session) return [];
+
+    return await db.query.users.findMany({
+      columns: {
+        id: true,
+        name: true,
+        role: true,
+        username: true,
+      },
+      orderBy: (users, { asc }) => [asc(users.name)],
+    });
+  } catch (error) {
+    console.error("Error fetching participants:", error);
+    return [];
+  }
+}
+
 export async function getUserById(id: string) {
   try {
     return await db.query.users.findFirst({

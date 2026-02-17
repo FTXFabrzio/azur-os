@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -118,7 +119,9 @@ export function ProfileConfigDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 sm:max-w-[480px] border-none shadow-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-[1.5rem] bg-white text-slate-900">
-        
+        <DialogDescription className="sr-only">
+          Configuración de horarios de disponibilidad para la recepción de actividades técnicas.
+        </DialogDescription>
         {/* Compact Header */}
         <div className="px-6 py-4 bg-white border-b border-red-100 flex items-center justify-between shrink-0 relative z-20">
            <DialogTitle className="text-lg font-black tracking-tight uppercase text-slate-800">

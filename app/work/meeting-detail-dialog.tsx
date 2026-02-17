@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,9 @@ export function MeetingDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 overflow-hidden sm:max-w-[700px] border-none shadow-2xl h-[90vh] flex flex-col bg-white">
+        <DialogDescription className="sr-only">
+          Detalles de la reunión técnica o comercial, incluyendo participantes y chat en vivo.
+        </DialogDescription>
         {/* Header Operativo Compacto */}
         <DialogHeader className="bg-white px-6 py-4 border-b border-slate-100 shrink-0 flex flex-row items-center justify-between">
           <div className="space-y-0.5 flex-1 min-w-0 text-left">
