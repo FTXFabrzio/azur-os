@@ -14,8 +14,14 @@ export function usePushNotifications() {
       setPermission(Notification.permission);
       
       navigator.serviceWorker.ready.then((registration) => {
-        registration.pushManager.getSubscription().then((sub) => {
+        registration.pushManager.getSubscription().then(async (sub) => {
           setSubscription(sub);
+          // If we have a subscription on load, ensure it's synced with backend
+          // This fixes the "Active but NULL in DB" issue
+          if (sub) {
+             console.log("[PWA] Found existing subscription on load, syncing...");
+             await saveSubscriptionAction(sub.toJSON() as any);
+          }
         });
       });
     }
@@ -51,10 +57,16 @@ export function usePushNotifications() {
         return null;
       }
 
-      const sub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      });
+      let sub = await registration.pushManager.getSubscription();
+      
+      if (!sub) {
+        sub = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+      } else {
+        alert("ℹ️ Usando suscripción existente del navegador...");
+      }
 
       setSubscription(sub);
       

@@ -33,6 +33,10 @@ import {
   getUserAvailability, 
   updateAllAvailabilityRules 
 } from "@/lib/actions/work-logic";
+import { 
+  sendTestNotificationAction, 
+  getSubscriptionStatusAction 
+} from "@/lib/actions/pwa-actions";
 
 interface ProfileConfigDialogProps {
   open: boolean;
@@ -178,6 +182,30 @@ export function ProfileConfigDialog({
           >
             {permission === "granted" ? "Re-vincular" : "Activar"}
           </Button>
+        </div>
+
+        {/* DEBUG SECTION */}
+        <div className="mx-6 my-2 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex gap-2">
+            <Button 
+                size="sm" variant="outline" className="text-[10px]"
+                onClick={async () => {
+                    const status = await getSubscriptionStatusAction();
+                    alert("Estado en BD: " + (status.hasSubscription ? "✅ Suscrito" : "❌ Sin suscripción") + "\nPreview: " + (status.preview || "N/A"));
+                }}
+            >
+                🔍 Ver Estado BD
+            </Button>
+            <Button 
+                size="sm" variant="outline" className="text-[10px]"
+                onClick={async () => {
+                    alert("Enviando test...");
+                    const res = await sendTestNotificationAction();
+                    if (res.success) alert("✅ Enviado! Revisa tu barra de notificaciones");
+                    else alert("❌ Falló: " + res.error);
+                }}
+            >
+                🔔 Test Push
+            </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white scrollbar-thin">
