@@ -8,9 +8,9 @@ export function PWAInitializer() {
     if (
       typeof window !== "undefined" &&
       "serviceWorker" in navigator &&
-      window.workbox === undefined
+      (window as any).workbox === undefined
     ) {
-      const wb = window.workbox;
+      const wb = (window as any).workbox;
       
       // Explicit registration logic for Serwist
       const registerSW = async () => {
