@@ -28,25 +28,24 @@ export function usePushNotifications() {
   }, []);
 
   const subscribeUser = useCallback(async () => {
-    alert("🔄 Iniciando proceso de suscripción...");
+    console.log("[PWA] Starting subscription process...");
     if (!isSupported) {
-      alert("❌ Tu navegador no soporta notificaciones (PushManager o ServiceWorker faltantes).");
+      alert("❌ Tu navegador no soporta notificaciones.");
       return null;
     }
 
     try {
-      alert("🔔 Solicitando permiso al navegador...");
       const result = await Notification.requestPermission();
       setPermission(result);
 
       if (result !== "granted") {
-        alert("⚠️ Permiso denegado o cerrado. (Estado: " + result + ")");
-        throw new Error("Permission not granted for notifications");
+        console.warn("[PWA] Permission denied:", result);
+        return null;
       }
 
-      alert("📡 Conectando con Service Worker...");
+      console.log("[PWA] Connecting to Service Worker...");
       const registration = await navigator.serviceWorker.ready;
-      alert("✅ Service Worker listo. Obteniendo llave pública...");
+      console.log("[PWA] Service Worker ready.");
       
       // We need a VAPID public key from the backend
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -65,7 +64,7 @@ export function usePushNotifications() {
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
       } else {
-        alert("ℹ️ Usando suscripción existente del navegador...");
+        console.log("[PWA] Using existing browser subscription");
       }
 
       setSubscription(sub);
@@ -85,7 +84,7 @@ export function usePushNotifications() {
       
       return sub;
     } catch (error: any) {
-      console.error("Failed to subscribe user:", error);
+      console.error("[PWA] Subscription failed:", error);
       alert("⚠️ Error de suscripción: " + (error.message || "Error desconocido"));
       return null;
     }

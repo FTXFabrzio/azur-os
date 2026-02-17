@@ -33,10 +33,6 @@ import {
   getUserAvailability, 
   updateAllAvailabilityRules 
 } from "@/lib/actions/work-logic";
-import { 
-  sendTestNotificationAction, 
-  getSubscriptionStatusAction 
-} from "@/lib/actions/pwa-actions";
 
 interface ProfileConfigDialogProps {
   open: boolean;
@@ -63,7 +59,7 @@ export function ProfileConfigDialog({
   const [rules, setRules] = useState<any[]>([]);
   const [applyToAll, setApplyToAll] = useState(false);
 
-  const { permission, subscribeUser, isSupported, forceSync, hardReset } = usePushNotifications();
+  const { permission, subscribeUser, isSupported } = usePushNotifications();
 
   useEffect(() => {
     if (open && userId) {
@@ -180,38 +176,8 @@ export function ProfileConfigDialog({
                permission === "granted" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
             )}
           >
-            {permission === "granted" ? "Re-vincular" : "Activar"}
+            {permission === "granted" ? "Vincular" : "Activar"}
           </Button>
-        </div>
-
-        {/* DEBUG SECTION */}
-        <div className="mx-6 my-2 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex gap-2">
-            <Button 
-                size="sm" variant="outline" className="text-[10px]"
-                onClick={async () => {
-                    const status = await getSubscriptionStatusAction();
-                    alert("Estado en BD: " + (status.hasSubscription ? "✅ Suscrito" : "❌ Sin suscripción") + "\nPreview: " + (status.preview || "N/A"));
-                }}
-            >
-                🔍 Ver Estado BD
-            </Button>
-            <Button 
-                size="sm" variant="outline" className="text-[10px]"
-                onClick={async () => {
-                    alert("Enviando test...");
-                    const res = await sendTestNotificationAction();
-                    if (res.success) alert("✅ Enviado! Revisa tu barra de notificaciones");
-                    else alert("❌ Falló: " + res.error);
-                }}
-            >
-                🔔 Test Push
-            </Button>
-            <Button size="sm" variant="destructive" className="text-[10px]" onClick={hardReset}>
-                🗑️ Reset
-            </Button>
-            <Button size="sm" variant="secondary" className="text-[10px]" onClick={forceSync}>
-                ♻️ Force
-            </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white scrollbar-thin">
