@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import useSWR from "swr";
+import { deleteMeetingAction } from "@/lib/actions/work-logic";
 import { ModernAgenda } from "./modern-agenda";
 import { 
   Calendar as CalendarIcon, 
@@ -19,14 +21,35 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 import { NewMeetingDialog } from "./new-meeting-dialog";
 import { ProfileConfigDialog } from "./profile-config-dialog";
 import { MeetingDetailDialog } from "./meeting-detail-dialog";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 interface WorkDashboardContentProps {
   initialMeetings: any[];
   user: any;
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardContentProps) {
-  const [meetings] = useState(initialMeetings);
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+
+  useEffect(() => {
+    if (error === "access_denied") {
+      // Small delay to ensure the UI is ready
+      setTimeout(() => {
+        alert("⛔ ACCESO DENEGADO: Solo el administrador maestro 'fortex' puede entrar al Control Central.");
+      }, 500);
+    }
+  }, [error]);
+
+  const { data: meetings, mutate } = useSWR("/api/meetings", fetcher, {
+    fallbackData: initialMeetings,
+    refreshInterval: 60000,
+    revalidateOnFocus: true,
+  });
+  
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
@@ -39,7 +62,7 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
   };
 
   // Augment meetings with myStatus for the Inbox Strategy
-  const augmentedMeetings = initialMeetings.map(meeting => {
+  const augmentedMeetings = (meetings || []).map((meeting: any) => {
     const myParticipant = meeting.participants?.find((p: any) => p.userId === displayUser.id);
     return {
       ...meeting,
@@ -48,12 +71,29 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
   });
 
   const meetingsCount = augmentedMeetings.length;
-  const pendingCountByMe = augmentedMeetings.filter(m => m.myStatus === "ESPERANDO").length;
-  const confirmedCount = augmentedMeetings.filter(m => m.status === "CONFIRMADA").length;
+  const pendingCountByMe = augmentedMeetings.filter((m: any) => m.myStatus === "ESPERANDO").length;
+  const confirmedCount = augmentedMeetings.filter((m: any) => m.status === "CONFIRMADA").length;
 
   const handleEventClick = (meetingId: string) => {
     setSelectedMeetingId(meetingId);
     setIsDetailOpen(true);
+  };
+
+  const handleDeleteMeeting = async (meetingId: string) => {
+    // Optimistic UI Update: Filter out the deleted meeting immediately
+    const updatedMeetings = meetings.filter((m: any) => m.id !== meetingId);
+    mutate(updatedMeetings, false); // Update locally without revalidating yet
+
+    try {
+      const res = await deleteMeetingAction(meetingId);
+      if (!res.success) {
+        // If it failed, rollback (revalidate from server)
+        mutate();
+      }
+    } catch (error) {
+      console.error("Failed to delete:", error);
+      mutate();
+    }
   };
 
   return (
@@ -76,6 +116,7 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
         onOpenChange={setIsDetailOpen} 
         meetingId={selectedMeetingId} 
         userId={displayUser.id} 
+        onDelete={handleDeleteMeeting}
       />
 
       {/* Static Header Section - Premium Floating Card Style */}

@@ -32,8 +32,9 @@ export function LoginForm() {
       if (result.success) {
         // We simulate a small delay to keep the loading animation feel
         setTimeout(() => {
-          const role = result.user?.role;
-          if (role === "ADMIN" || role === "CEO" || result.user?.username === "fortex") {
+          const username = result.user?.username;
+          // Strict RBAC: Only 'fortex' goes to /dashboard.
+          if (username === "fortex") {
             router.push("/dashboard");
           } else {
             router.push("/work");

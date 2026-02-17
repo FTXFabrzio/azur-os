@@ -51,6 +51,17 @@ export async function authenticate(username: string, password: string) {
   }
 }
 
+export async function getSession() {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("auth_session");
+  if (!session) return null;
+  try {
+    return JSON.parse(session.value);
+  } catch {
+    return null;
+  }
+}
+
 export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete("auth_session");

@@ -4,11 +4,13 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/lib/actions/auth";
 import { useRouter } from "next/navigation";
+import { clearAllLocalData } from "@/lib/db/pwa-db";
 
 export function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
+    await clearAllLocalData();
     await logout();
     router.push("/");
   };

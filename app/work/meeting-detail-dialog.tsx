@@ -25,7 +25,8 @@ import {
   Users as UsersIcon,
   Info,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from "lucide-react";
 import { 
   getMeetingWithDetails, 
@@ -38,6 +39,7 @@ interface MeetingDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+  onDelete?: (meetingId: string) => void;
 }
 
 export function MeetingDetailDialog({
@@ -45,6 +47,7 @@ export function MeetingDetailDialog({
   open,
   onOpenChange,
   userId,
+  onDelete,
 }: MeetingDetailDialogProps) {
   const [meeting, setMeeting] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -84,6 +87,14 @@ export function MeetingDetailDialog({
     const res = await sendChatMessage(meetingId, userId, content);
     if (res.success) {
       refreshData();
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!meetingId || !onDelete) return;
+    if (confirm("¿Estás seguro de eliminar esta reunión?")) {
+      onDelete(meetingId);
+      onOpenChange(false);
     }
   };
 
@@ -128,6 +139,18 @@ export function MeetingDetailDialog({
                 </div>
              </div>
           </div>
+          
+          {/* Delete Button for Creator */}
+          {meeting.createdBy === userId && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDelete}
+              className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </DialogHeader>
 
         {/* Banner de Confirmación Inteligente (Sticky) */}

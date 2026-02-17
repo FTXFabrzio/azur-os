@@ -1,7 +1,19 @@
 import { LoginForm } from "@/components/auth/LoginForm";
 import { CircuitBackground } from "@/components/ui/CircuitBackground";
+import { getSession } from "@/lib/actions/auth";
+import { redirect } from "next/navigation";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await getSession();
+
+  if (session) {
+    if (session.username === 'fortex') {
+      redirect("/dashboard");
+    } else {
+      redirect("/work");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-black flex items-center justify-center relative select-none">
       {/* Immersive background with circuits */}

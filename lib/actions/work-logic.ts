@@ -2,9 +2,10 @@
 
 import { db } from "@/lib/db";
 import { meetings, meetingParticipants, messages, users, availabilityRules } from "@/lib/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from "uuid";
+import { sendPushNotification } from "@/lib/push-notifications";
 
 // 1. CREAR REUNIÓN CON TRANSACCIÓN
 export async function createMeetingTransaction(data: {
@@ -55,11 +56,42 @@ export async function createMeetingTransaction(data: {
       });
     });
 
+    // 1.4 Trigger Notifications in background (non-blocking)
+    if (data.participantIds.length > 0) {
+      db.query.users.findMany({
+        where: inArray(users.id, data.participantIds)
+      }).then(participants => {
+        participants.forEach(p => {
+          if (p.pushSubscription) {
+            sendPushNotification(p.pushSubscription, {
+              title: "🚀 Nueva Reunión",
+              body: `Has sido invitado a una reunión para ${data.clientName}.`,
+              url: `/dashboard` // or specific task URL if available
+            });
+          }
+        });
+      });
+    }
+
     revalidatePath("/work");
+    revalidatePath("/dashboard");
     return { success: true, meetingId };
   } catch (error) {
     console.error("Error in createMeetingTransaction:", error);
     return { success: false, error: "Error al crear la reunión" };
+  }
+}
+
+// 1.5 DELETE REUNIÓN
+export async function deleteMeetingAction(meetingId: string) {
+  try {
+    await db.delete(meetings).where(eq(meetings.id, meetingId));
+    revalidatePath("/work");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting meeting:", error);
+    return { success: false, error: "Error al eliminar la reunión" };
   }
 }
 

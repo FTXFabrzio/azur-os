@@ -7,9 +7,7 @@ export function PWAInitializer() {
   const { isSupported, permission, subscribeUser } = usePushNotifications();
 
   useEffect(() => {
-    // Automatically try to subscribe if permission is already granted
-    // or if we want to prompt the user (though prompting on load is usually bad UX)
-    // For now, we'll just log the status.
+    // Proactively sync subscription when the app load
     if (isSupported && permission === "granted") {
       subscribeUser();
     }

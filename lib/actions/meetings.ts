@@ -2,12 +2,24 @@
 
 import { db } from "@/lib/db";
 import { meetings, meetingParticipants } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, or, exists, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getSession } from "./auth";
 
 export async function getMeetings() {
   try {
+    const session = await getSession();
+    if (!session) return [];
+
+    const isAdmin = session.username === 'fortex';
+
+    // If admin 'fortex', return everything. 
+    // Otherwise, return only meetings created by them OR where they are participants.
     return await db.query.meetings.findMany({
+      where: isAdmin ? undefined : or(
+        eq(meetings.createdBy, session.id),
+        sql`EXISTS (SELECT 1 FROM ${meetingParticipants} WHERE ${meetingParticipants.meetingId} = ${meetings.id} AND ${meetingParticipants.userId} = ${session.id})`
+      ),
       with: {
         creator: true,
         participants: true,

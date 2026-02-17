@@ -9,6 +9,7 @@ export const users = sqliteTable("users", {
   role: text("role", { enum: ["CEO", "ARCHITECT", "COMMERCIAL", "ADMIN"] }).notNull(),
   phone: text("phone"),
   isAvailableEarly: integer("is_available_early", { mode: "boolean" }).default(false),
+  pushSubscription: text("push_subscription"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 

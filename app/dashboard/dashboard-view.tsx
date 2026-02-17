@@ -17,9 +17,12 @@ import { useRouter } from "next/navigation"
 import { logout } from "@/lib/actions/auth"
 import { isToday } from "date-fns"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { saveMeetingsToLocal, getLocalMeetings } from "@/lib/db/pwa-db"
+import { saveMeetingsToLocal, getLocalMeetings, clearAllLocalData } from "@/lib/db/pwa-db"
 import { useOnlineStatus } from "@/hooks/use-online-status"
 import { useEffect, useState } from "react"
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface DashboardViewProps {
   initialUsers: any[]
@@ -27,25 +30,36 @@ interface DashboardViewProps {
   user: {
     name: string;
     role: string;
+    username: string;
   } | null
 }
 
 export function DashboardView({ initialUsers, initialMeetings, user }: DashboardViewProps) {
   const [isStepperOpen, setIsStepperOpen] = useState(false);
-  const [meetings, setMeetings] = useState<any[]>(initialMeetings);
-  const isOnline = useOnlineStatus();
   const router = useRouter();
+  const isOnline = useOnlineStatus();
+
+  const { data: swrMeetings, mutate } = useSWR("/api/meetings", fetcher, {
+    fallbackData: initialMeetings,
+    refreshInterval: 60000,
+    revalidateOnFocus: true,
+  });
+
+  const [meetings, setMeetings] = useState<any[]>(initialMeetings);
 
   useEffect(() => {
     if (isOnline) {
-      setMeetings(initialMeetings);
-      saveMeetingsToLocal(initialMeetings);
+      if (swrMeetings) {
+        setMeetings(swrMeetings);
+        saveMeetingsToLocal(swrMeetings);
+      }
     } else {
       getLocalMeetings().then(setMeetings);
     }
-  }, [isOnline, initialMeetings]);
+  }, [isOnline, swrMeetings]);
 
   const handleLogout = async () => {
+    await clearAllLocalData();
     await logout();
     router.push("/");
   };

@@ -77,3 +77,11 @@ export async function clearAction(id: string) {
   const db = await getDB();
   await db.delete('pending-actions', id);
 }
+
+export async function clearAllLocalData() {
+  const db = await getDB();
+  const tx = db.transaction(['meetings', 'pending-actions'], 'readwrite');
+  await tx.objectStore('meetings').clear();
+  await tx.objectStore('pending-actions').clear();
+  await tx.done;
+}

@@ -5,9 +5,16 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { hash } from "bcryptjs";
+import { getSession } from "./auth";
 
 export async function getUsers() {
   try {
+    const session = await getSession();
+    // Only 'fortex' can manage users/view full list for admin purposes
+    if (!session || session.username !== 'fortex') {
+      return [];
+    }
+
     return await db.query.users.findMany({
       orderBy: (users, { desc }) => [desc(users.createdAt)],
     });

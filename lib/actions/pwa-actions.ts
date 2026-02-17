@@ -1,21 +1,25 @@
 "use server";
 
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { getSession } from "@/lib/actions/auth";
+
 /**
  * Sends the push subscription to the backend to associate it with the current user.
- * In a real scenario, this would save the subscription to the database.
  */
-export async function saveSubscriptionAction(subscription: PushSubscription) {
+export async function saveSubscriptionAction(subscription: any) {
   try {
-    // Here you would get the user ID from the session
-    // and save the subscription to your database.
-    console.log("Saving subscription to backend:", JSON.stringify(subscription));
+    const session = await getSession();
+    if (!session?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
 
-    // Example of what you would do:
-    // await db.insert(pushSubscriptions).values({
-    //   userId: currentUser.id,
-    //   subscription: JSON.stringify(subscription),
-    //   createdAt: new Date(),
-    // });
+    const subString = JSON.stringify(subscription);
+    
+    await db.update(users)
+      .set({ pushSubscription: subString })
+      .where(eq(users.id, session.id));
 
     return { success: true };
   } catch (error) {
