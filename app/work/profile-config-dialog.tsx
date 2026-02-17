@@ -19,8 +19,11 @@ import {
   Save, 
   ShieldCheck,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  BellOff
 } from "lucide-react";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { cn } from "@/lib/utils";
 const TimePickerSheet = dynamic(() => import("./time-picker-sheet").then(mod => mod.TimePickerSheet), {
   ssr: false,
@@ -55,6 +58,8 @@ export function ProfileConfigDialog({
   const [loading, setLoading] = useState(false);
   const [rules, setRules] = useState<any[]>([]);
   const [applyToAll, setApplyToAll] = useState(false);
+
+  const { permission, subscribeUser, isSupported } = usePushNotifications();
 
   useEffect(() => {
     if (open && userId) {
@@ -148,6 +153,31 @@ export function ProfileConfigDialog({
             onCheckedChange={toggleAllWorkDays}
             className="data-[state=checked]:bg-red-600 scale-90"
           />
+        </div>
+
+        {/* Push Notifications Section */}
+        <div className="bg-emerald-50/50 px-6 py-4 border-b border-emerald-100 flex items-center justify-between shrink-0">
+          <div className="flex flex-col">
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center gap-2">
+                 <Bell className="h-3.5 w-3.5" />
+                 Notificaciones Push
+              </span>
+              <span className="text-[10px] font-bold text-emerald-600/70 leading-tight">
+                 {permission === "granted" ? "Activadas en este dispositivo" : "Recibe avisos de nuevas reuniones"}
+              </span>
+          </div>
+          <Button 
+            size="sm" 
+            variant={permission === "granted" ? "ghost" : "default"}
+            disabled={permission === "granted" || !isSupported}
+            onClick={() => subscribeUser()}
+            className={cn(
+               "h-9 px-4 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all",
+               permission === "granted" ? "text-emerald-600 bg-emerald-100/50" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+            )}
+          >
+            {permission === "granted" ? "Activo" : "Activar"}
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white scrollbar-thin">

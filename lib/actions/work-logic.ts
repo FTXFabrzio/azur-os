@@ -58,18 +58,25 @@ export async function createMeetingTransaction(data: {
 
     // 1.4 Trigger Notifications in background (non-blocking)
     if (data.participantIds.length > 0) {
+      console.log(`[Push] Triggering notifications for ${data.participantIds.length} participants`);
       db.query.users.findMany({
         where: inArray(users.id, data.participantIds)
       }).then(participants => {
+        console.log(`[Push] Found ${participants.length} users with subscriptions`);
         participants.forEach(p => {
           if (p.pushSubscription) {
+            console.log(`[Push] Sending to ${p.name} (${p.username})`);
             sendPushNotification(p.pushSubscription, {
               title: "🚀 Nueva Reunión",
               body: `Has sido invitado a una reunión para ${data.clientName}.`,
-              url: `/dashboard` // or specific task URL if available
+              url: `/work`
             });
+          } else {
+            console.log(`[Push] User ${p.username} has no active subscription`);
           }
         });
+      }).catch(err => {
+        console.error("[Push] Error fetching participants for notifications:", err);
       });
     }
 

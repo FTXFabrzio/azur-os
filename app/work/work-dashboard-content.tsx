@@ -35,20 +35,19 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
 
-  useEffect(() => {
-    if (error === "access_denied") {
-      // Small delay to ensure the UI is ready
-      setTimeout(() => {
-        alert("⛔ ACCESO DENEGADO: Solo el administrador maestro 'fortex' puede entrar al Control Central.");
-      }, 500);
-    }
-  }, [error]);
-
   const { data: meetings, mutate } = useSWR("/api/meetings", fetcher, {
     fallbackData: initialMeetings,
     refreshInterval: 60000,
     revalidateOnFocus: true,
   });
+
+  useEffect(() => {
+    if (error) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [error]);
   
   const [isNewMeetingOpen, setIsNewMeetingOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -136,7 +135,7 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
           </div>
           
           <div className="flex flex-wrap items-center gap-3 relative z-10">
-            {(displayUser.role === "CEO" || displayUser.role === "ADMIN") && (
+            {user?.username === "fortex" && (
               <Link href="/dashboard">
                 <Button 
                   variant="outline" 

@@ -13,19 +13,24 @@ export async function getMeetings() {
 
     const isAdmin = session.username === 'fortex';
 
-    // If admin 'fortex', return everything. 
-    // Otherwise, return only meetings created by them OR where they are participants.
-    return await db.query.meetings.findMany({
-      where: isAdmin ? undefined : or(
-        eq(meetings.createdBy, session.id),
-        sql`EXISTS (SELECT 1 FROM ${meetingParticipants} WHERE ${meetingParticipants.meetingId} = ${meetings.id} AND ${meetingParticipants.userId} = ${session.id})`
-      ),
+    // RBAC: 'fortex' sees all. Others see meetings they created OR where they are participants.
+    // Using a reliable EXISTS subquery with raw table names to ensure perfect filtering in SQLite/Turso.
+    const results = await db.query.meetings.findMany({
+      where: (m, { eq, or, sql }) => {
+        if (isAdmin) return undefined;
+        return or(
+          eq(m.createdBy, session.id),
+          sql`EXISTS (SELECT 1 FROM meeting_participants WHERE meeting_id = ${m.id} AND user_id = ${session.id})`
+        );
+      },
       with: {
         creator: true,
         participants: true,
       },
-      orderBy: (meetings, { asc }) => [asc(meetings.startDatetime)],
+      orderBy: (m, { asc }) => [asc(m.startDatetime)],
     });
+
+    return results;
   } catch (error) {
     console.error("Error fetching meetings:", error);
     return [];
