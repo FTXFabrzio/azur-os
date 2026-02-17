@@ -103,12 +103,45 @@ export function usePushNotifications() {
     }
   }, [subscription]);
 
+  const forceSync = useCallback(async () => {
+    if (!subscription) {
+      alert("❌ No hay suscripción activa en el navegador para sincronizar.");
+      return;
+    }
+    alert("🔄 Forzando sincronización con servidor...");
+    try {
+      const response = await saveSubscriptionAction(subscription.toJSON() as any);
+      if (response.success) {
+        alert("✅ Sincronización Éxitosa. Ahora verifica el estado en BD.");
+      } else {
+        alert("❌ Error al sincronizar: " + response.error);
+      }
+    } catch (err: any) {
+      alert("❌ Error de red: " + err.message);
+    }
+  }, [subscription]);
+
+  const hardReset = useCallback(async () => {
+    if (!subscription) return;
+    try {
+      alert("🗑️ Eliminando suscripción del navegador...");
+      await subscription.unsubscribe();
+      setSubscription(null);
+      alert("✅ Reset completo. Ahora presiona 'Activar' nuevamente.");
+      window.location.reload();
+    } catch (err: any) {
+      alert("❌ Error al resetear: " + err.message);
+    }
+  }, [subscription]);
+
   return {
     permission,
     subscription,
     isSupported,
     subscribeUser,
     unsubscribeUser,
+    forceSync,
+    hardReset
   };
 }
 

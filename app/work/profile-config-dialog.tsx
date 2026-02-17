@@ -63,7 +63,7 @@ export function ProfileConfigDialog({
   const [rules, setRules] = useState<any[]>([]);
   const [applyToAll, setApplyToAll] = useState(false);
 
-  const { permission, subscribeUser, isSupported } = usePushNotifications();
+  const { permission, subscribeUser, isSupported, forceSync, hardReset } = usePushNotifications();
 
   useEffect(() => {
     if (open && userId) {
@@ -205,6 +205,12 @@ export function ProfileConfigDialog({
                 }}
             >
                 🔔 Test Push
+            </Button>
+            <Button size="sm" variant="destructive" className="text-[10px]" onClick={hardReset}>
+                🗑️ Reset
+            </Button>
+            <Button size="sm" variant="secondary" className="text-[10px]" onClick={forceSync}>
+                ♻️ Force
             </Button>
         </div>
 
