@@ -115,6 +115,7 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
         open={isNewMeetingOpen} 
         onOpenChange={setIsNewMeetingOpen} 
         userId={displayUser.id} 
+        mutate={mutate}
       />
       
       <ProfileConfigDialog 

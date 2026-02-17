@@ -34,12 +34,14 @@ interface NewMeetingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+  mutate?: any;
 }
 
 export function NewMeetingDialog({
   open,
   onOpenChange,
   userId,
+  mutate,
 }: NewMeetingDialogProps) {
   const [loading, setLoading] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
@@ -120,7 +122,7 @@ export function NewMeetingDialog({
         finalAddress = `${platform}: ${formData.address}`;
       }
 
-      const result = await createMeetingTransaction({
+      const promise = createMeetingTransaction({
         clientName: formData.clientName,
         address: finalAddress,
         description: formData.description,
@@ -131,8 +133,15 @@ export function NewMeetingDialog({
         participantIds: formData.participantIds,
       });
 
+      // OPTIMISTIC: Trigger a re-fetch in the background immediately
+      // This makes the meeting appear in the list faster
+      if (mutate) mutate();
+
+      const result = await promise;
+
       if (result.success) {
         setFeedback({ open: true, type: "success" });
+        if (mutate) mutate(); // Final sync just in case
       } else {
         setFeedback({ open: true, type: "error", error: result.error });
       }
