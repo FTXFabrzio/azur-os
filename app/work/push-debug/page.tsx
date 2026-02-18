@@ -14,7 +14,9 @@ import {
   Globe,
   AlertCircle,
   CheckCircle2,
-  Trash
+  Trash,
+  Copy,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -90,6 +92,23 @@ export default function PushDebugPage() {
         }
     });
 
+    // Latency Listener from SW
+    if ('serviceWorker' in navigator) {
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data && event.data.type === 'PUSH_LATENCY') {
+          const { latency, serverTime, receivedAt } = event.data;
+          addLog(`⏱️ LATENCIA DETECTADA: ${latency}ms`, "info", {
+            latency_ms: latency,
+            server_time: new Date(serverTime).toISOString(),
+            client_time: new Date(receivedAt).toISOString()
+          });
+        }
+      };
+      
+      navigator.serviceWorker.addEventListener('message', handleMessage);
+      return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+    }
+
   }, []);
 
   const registerSW = async () => {
@@ -125,6 +144,13 @@ export default function PushDebugPage() {
     try {
         setLoading(true);
         addLog("🚀 Iniciando Proceso de Suscripción...", "info");
+
+        // iOS Specific Logic: Check if PushManager is available
+        if (!('PushManager' in window)) {
+            addLog("⚠️ En iOS, debes agregar la app a la pantalla de inicio para habilitar las notificaciones", "warning");
+            setLoading(false);
+            return;
+        }
         
         const reg = await navigator.serviceWorker.ready;
         addLog("Service Worker reporta estado: LISTO.", "success");
@@ -151,6 +177,7 @@ export default function PushDebugPage() {
         
         if (res.success) {
             addLog("🎉 ÉXITO: Suscripción guardada y activa en DB!", "success");
+            addLog("✅ ¡Felicitaciones! Suscripción activada correctamente. Tu dispositivo está listo para recibir alertas.", "success");
             setDbStatus("Suscrito");
         } else {
             addLog(`❌ Error en Servidor: ${res.error}`, "error", res);
@@ -170,6 +197,16 @@ export default function PushDebugPage() {
   };
 
   const clearLogs = () => setLogs([]);
+
+  const copyToClipboard = () => {
+    const text = logs.map(log => {
+      const ms = log.timestamp.getMilliseconds().toString().padStart(3, '0');
+      const time = `${log.timestamp.toLocaleTimeString([], { hour12: false })}.${ms}`;
+      return `[${time}] ${log.message}${log.details ? '\n' + JSON.stringify(log.details, null, 2) : ''}`;
+    }).join('\n');
+    navigator.clipboard.writeText(text);
+    addLog("📋 Logs copiados al portapapeles", "success");
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20">
@@ -282,11 +319,22 @@ export default function PushDebugPage() {
             </Button>
           </div>
 
-          <div 
-            ref={scrollRef}
-            className="bg-[#0F172A]/95 backdrop-blur-xl border border-slate-800 rounded-3xl h-[500px] overflow-y-auto p-6 font-mono text-[11px] shadow-2xl relative"
-          >
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/0 via-red-500/50 to-red-500/0 opacity-30" />
+          <div className="relative group/console">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={copyToClipboard}
+              className="absolute top-4 right-4 z-50 h-8 w-8 rounded-xl bg-slate-900/50 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 backdrop-blur-md opacity-0 group-hover/console:opacity-100 transition-all duration-300"
+              title="Copiar Logs"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+
+            <div 
+              ref={scrollRef}
+              className="bg-[#0F172A]/95 backdrop-blur-xl border border-slate-800 rounded-3xl h-[500px] overflow-y-auto p-6 font-mono text-[11px] shadow-2xl relative"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/0 via-red-500/50 to-red-500/0 opacity-30" />
             
             <AnimatePresence mode="popLayout">
               {logs.length === 0 ? (
@@ -303,17 +351,17 @@ export default function PushDebugPage() {
                     className="mb-3 group"
                   >
                     <div className="flex items-start gap-3">
-                      <span className="text-slate-600 shrink-0 select-none">
-                        [{log.timestamp.toLocaleTimeString([], { hour12: false })}]
+                      <span className="text-slate-500 shrink-0 select-none font-medium">
+                        [{log.timestamp.toLocaleTimeString([], { hour12: false })}.{log.timestamp.getMilliseconds().toString().padStart(3, '0')}]
                       </span>
                       
                       <div className="flex-1">
                         <span className={cn(
                           "font-bold",
                           log.type === "success" && "text-emerald-400",
-                          log.type === "error" && "text-red-400 font-black",
+                          log.type === "error" && "text-red-500 font-black brightness-110",
                           log.type === "warning" && "text-amber-400",
-                          log.type === "info" && "text-blue-400"
+                          log.type === "info" && "text-gray-100"
                         )}>
                           {log.message}
                         </span>
@@ -339,9 +387,9 @@ export default function PushDebugPage() {
             </AnimatePresence>
           </div>
         </div>
-
       </div>
     </div>
+  </div>
   );
 }
 

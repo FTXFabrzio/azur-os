@@ -21,34 +21,54 @@ installSerwist({
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
-  try {
-    const data = event.data.json();
-    const title = data.title || "Azur OS";
-    // Branding: Powered by Fortex
-    const body = `${data.body || ""}\n\nPowered by Fortex`.trim();
-    const icon = "/icons/icono.ico";
-    const url = data.url || "/dashboard";
+  const promiseChain = (async () => {
+    try {
+      const data = event.data?.json();
+      const now = Date.now();
+      const serverTime = data.createdAt || now;
+      const latency = now - serverTime;
 
-    const options = {
-      body,
-      icon,
-      badge: icon,
-      vibrate: [100, 50, 100],
-      data: { url },
-      tag: data.tag || "azur-os-push",
-    };
+      const title = data.title || "Azur OS";
+      const body = `${data.body || ""}\n\nPowered by Fortex`.trim();
+      const icon = "/icons/icono.ico";
+      const url = data.url || "/dashboard";
 
-    event.waitUntil(self.registration.showNotification(title, options as any));
-  } catch (error) {
-    console.error("Error displaying notification:", error);
-    const text = event.data.text();
-    event.waitUntil(
-      self.registration.showNotification("Azur OS", {
-        body: `${text}\n\nPowered by Fortex`,
+      const showNotificationPromise = self.registration.showNotification(title, {
+        body,
+        icon,
+        badge: icon,
+        vibrate: [100, 50, 100],
+        data: { 
+          url,
+          latency,
+          receivedAt: now,
+          serverTime
+        },
+        tag: data.tag || "azur-os-push",
+      } as any);
+
+      // Log latency to the main thread if possible
+      const clients = await self.clients.matchAll();
+      clients.forEach(client => {
+        client.postMessage({
+          type: "PUSH_LATENCY",
+          latency,
+          serverTime,
+          receivedAt: now
+        });
+      });
+
+      return showNotificationPromise;
+    } catch (error) {
+      console.error("Error displaying notification:", error);
+      return self.registration.showNotification("Azur OS", {
+        body: "Nueva actualización\n\nPowered by Fortex",
         icon: "/icons/icono.ico",
-      } as any)
-    );
-  }
+      } as any);
+    }
+  })();
+
+  event.waitUntil(promiseChain);
 });
 
 // Notification Click Listener

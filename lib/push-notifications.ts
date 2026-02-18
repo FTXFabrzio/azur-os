@@ -19,7 +19,23 @@ export async function sendPushNotification(subscription: string, payload: {
 }) {
   try {
     const sub = JSON.parse(subscription);
-    await webpush.sendNotification(sub, JSON.stringify(payload));
+    
+    // Optimization: Add server timestamp for latency tracking
+    // Optimization: Lightweight payload
+    const lightweightPayload = {
+      title: payload.title,
+      body: payload.body,
+      url: payload.url,
+      tag: payload.tag,
+      createdAt: Date.now(),
+    };
+
+    await webpush.sendNotification(sub, JSON.stringify(lightweightPayload), {
+      headers: {
+        'Urgency': 'high'
+      }
+    });
+
     return { success: true };
   } catch (error: any) {
     if (error.statusCode === 404 || error.statusCode === 410) {
