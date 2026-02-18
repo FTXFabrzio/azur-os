@@ -153,15 +153,7 @@ export function MeetingDetailDialog({
              </div>
           </div>
           
-          {/* Global Delete Button - Accessible to all participants */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+
         </DialogHeader>
 
         {/* Banner de Confirmación Inteligente (Sticky) */}
@@ -234,7 +226,7 @@ export function MeetingDetailDialog({
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
-                    {meeting.participants?.map((p: any) => (
+                    {meeting.participants?.filter((p: any) => p.user?.username !== 'fortex').map((p: any) => (
                       <div key={p.userId} className="relative flex items-center gap-3 bg-white border border-slate-100 p-3 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-slate-200 transition-colors">
                         <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
                           <AvatarFallback className={cn(
@@ -261,6 +253,18 @@ export function MeetingDetailDialog({
                     ))}
                   </div>
                 </div>
+              </div>
+
+              {/* Botón de eliminación al final */}
+              <div className="pt-12 pb-4 flex justify-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50 font-bold text-xs uppercase tracking-widest gap-2 h-12 px-6 rounded-2xl transition-all"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar de la agenda
+                </Button>
               </div>
             </TabsContent>
 

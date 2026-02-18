@@ -24,17 +24,29 @@ import {
   X // Import X icon if needed, but Dialog usually has a Close button. The user asked to leave the X. Shadcn DialogContent usually includes a Close X. The custom header had a Plus. I will remove the Plus.
 } from "lucide-react";
 import { getAvailableParticipants, getUserById } from "@/lib/actions/users";
-import { createMeetingTransaction } from "@/lib/actions/work-logic";
+import { createMeetingTransaction, getMeetingConflicts, getRecommendedSlots } from "@/lib/actions/work-logic";
 import { TimePickerSheet } from "./time-picker-sheet";
-import { format, addDays, startOfToday, parse, addMinutes, isSameDay } from "date-fns";
+import { format, addDays, startOfToday, parse, addMinutes, isSameDay, setHours, setMinutes } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
+import { Sparkles, AlertTriangle } from "lucide-react";
 
 interface NewMeetingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
   mutate?: any;
+  initialDate?: Date;
 }
 
 export function NewMeetingDialog({
@@ -42,6 +54,7 @@ export function NewMeetingDialog({
   onOpenChange,
   userId,
   mutate,
+  initialDate,
 }: NewMeetingDialogProps) {
   const [loading, setLoading] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
@@ -67,6 +80,11 @@ export function NewMeetingDialog({
     error?: string;
   }>({ open: false, type: "success" });
 
+  const [conflicts, setConflicts] = useState<any[]>([]);
+  const [showConflictWarning, setShowConflictWarning] = useState(false);
+  const [recommendedSlots, setRecommendedSlots] = useState<any[]>([]);
+  const [isSearchingSlots, setIsSearchingSlots] = useState(false);
+
   // Calculate future dates for the strip (next 14 days)
   const dateStrip = useMemo(() => {
     return Array.from({ length: 14 }).map((_, i) => addDays(startOfToday(), i));
@@ -83,12 +101,49 @@ export function NewMeetingDialog({
         type: "PRESENCIAL",
         participantIds: [],
       });
-      setSelectedDate(startOfToday());
+      setSelectedDate(initialDate || startOfToday());
       setStartTime("09:00");
       setDuration(60);
       setPlatform("Meet");
+      setConflicts([]);
+      setRecommendedSlots([]);
     }
-  }, [open]);
+  }, [open, initialDate]);
+
+  // Conflict Checking Effect
+  useEffect(() => {
+    if (!open) return;
+
+    const [h, m] = startTime.split(":").map(Number);
+    const start = new Date(selectedDate);
+    start.setHours(h, m, 0, 0);
+    const end = addMinutes(start, duration);
+
+    const check = async () => {
+      const results = await getMeetingConflicts({
+        participantIds: [userId, ...formData.participantIds],
+        startDatetime: start.toISOString(),
+        endDatetime: end.toISOString(),
+        type: formData.type
+      });
+      setConflicts(results);
+    };
+
+    const timeoutId = setTimeout(check, 500); // Debounce
+    return () => clearTimeout(timeoutId);
+  }, [startTime, duration, selectedDate, formData.participantIds, formData.type, open, userId]);
+
+  const findRecommended = async () => {
+    setIsSearchingSlots(true);
+    const slots = await getRecommendedSlots({
+      participantIds: [userId, ...formData.participantIds],
+      date: selectedDate.toISOString(),
+      durationMinutes: duration,
+      type: formData.type
+    });
+    setRecommendedSlots(slots);
+    setIsSearchingSlots(false);
+  };
 
   // Derived End Time String
   const endTimeString = useMemo(() => {
@@ -101,9 +156,13 @@ export function NewMeetingDialog({
     }
   }, [startTime, duration]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmitRaw = async (force = false) => {
     if (!formData.clientName) return;
+    
+    if (!force && conflicts.length > 0) {
+      setShowConflictWarning(true);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -151,6 +210,11 @@ export function NewMeetingDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmitRaw();
   };
 
   const toggleParticipant = (uId: string) => {
@@ -348,11 +412,62 @@ export function NewMeetingDialog({
               </div>
             </div>
 
+            {/* Recommended Slots MVP */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Modo Recomendado</Label>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={findRecommended}
+                  disabled={isSearchingSlots}
+                  className="h-7 text-[10px] text-blue-600 font-black gap-1.5 px-2 hover:bg-blue-50 rounded-lg"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  {isSearchingSlots ? "Buscando..." : "Ver horarios recomendados"}
+                </Button>
+              </div>
+
+              {recommendedSlots.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide animate-in fade-in slide-in-from-top-2">
+                  {recommendedSlots.map((slot, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        const s = new Date(slot.start);
+                        setStartTime(format(s, "HH:mm"));
+                      }}
+                      className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap hover:bg-emerald-100 transition-colors"
+                    >
+                      {format(new Date(slot.start), "h:mm a")}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Conflict Banner */}
+            {conflicts.length > 0 && (
+              <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 flex gap-3 animate-in fade-in zoom-in duration-300">
+                <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] font-black text-orange-900 uppercase">Aviso de Conflicto</p>
+                  <p className="text-[10px] font-medium text-orange-700 leading-tight">
+                    {conflicts[0].userName} tiene otra actividad de {format(new Date(conflicts[0].start), "h:mm a")} a {format(new Date(conflicts[0].end), "h:mm a")}.
+                    {conflicts[0].type === "BUFFER" && " (Buffer de seguridad)"}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Participants */}
             <div className="space-y-2">
               <Label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider ml-1">Participantes</Label>
               <div className="flex flex-wrap gap-3">
-                 {availableUsers.filter(u => u.id !== userId).map((user, idx) => {
+                 {availableUsers.filter(u => u.id !== userId && u.username !== 'fortex').map((user, idx) => {
                    const isSelected = formData.participantIds.includes(user.id);
                    const colorClasses = getRoleColorBorder(user.role || "ADMIN");
                    // Mock availability logic: First 5 available (Green), others busy (Red) for demo
@@ -418,13 +533,50 @@ export function NewMeetingDialog({
              <Button
                type="submit"
                disabled={loading}
-               className="w-full h-14 bg-gradient-to-br from-[#D32F2F] to-[#B71C1C] hover:to-[#D32F2F] text-white rounded-2xl shadow-xl shadow-red-600/30 text-sm font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3"
+               className={cn(
+                 "w-full h-14 text-white rounded-2xl shadow-xl text-sm font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3",
+                 conflicts.length > 0 
+                  ? "bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 shadow-orange-600/20" 
+                  : "bg-gradient-to-br from-[#D32F2F] to-[#B71C1C] hover:to-[#D32F2F] shadow-red-600/30"
+               )}
              >
                {loading ? "Guardando..." : "Guardar Reunión"}
-               {!loading && <ArrowRight className="h-4 w-4" />}
+               {!loading && (conflicts.length > 0 ? <AlertTriangle className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />)}
              </Button>
           </div>
         </form>
+
+        {/* Conflict Warning Dialog */}
+        <AlertDialog open={showConflictWarning} onOpenChange={setShowConflictWarning}>
+          <AlertDialogContent className="rounded-[2.5rem] border-none p-8 gap-6 max-w-[420px]">
+            <AlertDialogHeader>
+              <div className="h-14 w-14 bg-orange-50 rounded-2xl flex items-center justify-center mb-2">
+                <AlertTriangle className="h-8 w-8 text-orange-500" />
+              </div>
+              <AlertDialogTitle className="text-2xl font-black tracking-tight text-slate-900">
+                ¿Estás seguro?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+                Detectamos un conflicto de horario o buffer para el equipo. 
+                <span className="block mt-2 font-bold text-slate-900">
+                  {conflicts.length > 0 && `${conflicts[0].userName} tiene otra reunión cerca.`}
+                </span>
+                Toma tus precauciones antes de continuar.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-3">
+              <AlertDialogCancel className="rounded-2xl h-12 border-slate-100 bg-slate-50 text-slate-500 font-bold hover:bg-slate-100 flex-1">
+                Revisar Horarios
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => handleSubmitRaw(true)}
+                className="rounded-2xl h-12 bg-orange-600 hover:bg-orange-700 text-white font-bold flex-1 shadow-lg shadow-orange-600/20"
+              >
+                Ignorar y Guardar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
       </DialogContent>
       

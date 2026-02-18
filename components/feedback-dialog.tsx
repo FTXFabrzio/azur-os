@@ -74,9 +74,9 @@ export function FeedbackDialog({
           </div>
 
           {/* Title */}
-          <h2 className="text-xl font-black text-slate-900 leading-tight mb-2">
+          <DialogTitle className="text-xl font-black text-slate-900 leading-tight mb-2">
             {title || (isSuccess ? `¡Todo listo, ${userName || "Usuario"}!` : "Lo lamento, no pudimos crear tu reunión")}
-          </h2>
+          </DialogTitle>
 
           {/* Message */}
           <p className="text-sm font-medium text-slate-500 px-4 leading-relaxed mb-8">

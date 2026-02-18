@@ -26,7 +26,7 @@ self.addEventListener("push", (event) => {
     const title = data.title || "Azur OS";
     // Branding: Powered by Fortex
     const body = `${data.body || ""}\n\nPowered by Fortex`.trim();
-    const icon = "/icons/icono.png";
+    const icon = "/icons/icono.ico";
     const url = data.url || "/dashboard";
 
     const options = {
@@ -45,7 +45,7 @@ self.addEventListener("push", (event) => {
     event.waitUntil(
       self.registration.showNotification("Azur OS", {
         body: `${text}\n\nPowered by Fortex`,
-        icon: "/icons/icono.png",
+        icon: "/icons/icono.ico",
       })
     );
   }

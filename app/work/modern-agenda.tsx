@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { format, addDays, startOfWeek, isSameDay, startOfToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Clock, MapPin, CheckCircle2, XCircle, Calendar, Inbox } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, MapPin, CheckCircle2, XCircle, Calendar, Inbox, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button"; // Assuming Button exists or use HTML button
@@ -26,6 +26,8 @@ interface ModernAgendaProps {
   meetings: Meeting[];
   onEventClick: (meetingId: string) => void;
   onStatusUpdate?: (meetingId: string, status: "ACEPTADO" | "RECHAZADO") => void; // Callback for inline actions
+  onNewMeetingRequest?: (date: Date) => void;
+  onDateChange?: (date: Date) => void;
 }
 
 const getStatusColor = (status: string) => {
@@ -49,7 +51,7 @@ const getRoleColor = (role?: string) => {
   return "bg-[#D32F2F] shadow-red-600/30"; // Default Azur Red
 };
 
-export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernAgendaProps) {
+export function ModernAgenda({ meetings, onEventClick, onStatusUpdate, onNewMeetingRequest, onDateChange }: ModernAgendaProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeTab, setActiveTab] = useState<"AGENDA" | "PENDING">("AGENDA");
@@ -68,6 +70,13 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
       setSelectedDate(startOfToday());
     }
   }, [weekOffset]);
+
+  useEffect(() => {
+    console.log("ModernAgenda mounted/updated. selectedDate:", selectedDate);
+    if (selectedDate) {
+      onDateChange?.(selectedDate);
+    }
+  }, [selectedDate, onDateChange]);
 
   // Calculate stats
   const pendingCount = useMemo(() => meetings.filter(m => m.myStatus === "ESPERANDO").length, [meetings]);
@@ -115,7 +124,9 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
                               <>
                                 {format(selectedDate, "EEEE", { locale: es })} <span className="text-red-600">{format(selectedDate, "d")}</span>
                               </>
-                            ) : "Cargando..."}
+                            ) : (
+                                <span className="opacity-0">Cargando...</span>
+                            )}
                         </span>
                     </>
                 ) : (
@@ -208,7 +219,9 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
                         </div>
                         
                         {/* Dots */}
-                        <div className="h-1">{!isSelected && hasMeetings && <div className="w-1 h-1 bg-slate-300 rounded-full" />}</div>
+                        <div className="h-1 mt-1 flex items-center justify-center">
+                          {!isSelected && hasMeetings && <div className="w-1.5 h-1.5 bg-slate-200 rounded-full" />}
+                        </div>
                       </button>
                     );
                   })}
@@ -228,10 +241,7 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
       <div className="space-y-4 px-1 relative z-10 pb-4">
         <AnimatePresence mode="popLayout">
           {filteredMeetings.length > 0 ? (
-            <div className={cn(
-                "space-y-4 px-1",
-                activeTab === "PENDING" && "sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:space-y-0 sm:gap-4 lg:gap-6"
-            )}>
+            <div className="space-y-4 px-1 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:space-y-0 sm:gap-4 lg:gap-6">
               {filteredMeetings.map((meeting) => (
                 <motion.div 
                   layout
@@ -241,8 +251,7 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate }: ModernA
                   exit={{ opacity: 0, x: -50, transition: { duration: 0.2 } }}
                   onClick={() => onEventClick(meeting.id)}
                   className={cn(
-                    "bg-white rounded-[1.25rem] p-5 border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer hover:shadow-md transition-all group relative overflow-hidden",
-                    activeTab === "PENDING" && "flex flex-col h-full bg-slate-50/30 border-slate-200/50"
+                    "bg-white rounded-[1.25rem] p-5 border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer hover:shadow-md transition-all group relative overflow-hidden flex flex-col h-full",
                   )}
                 >
                   {/* Status Strip */}

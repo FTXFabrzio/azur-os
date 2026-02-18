@@ -1,0 +1,21 @@
+import { google } from 'googleapis';
+
+export async function getGoogleDriveClient() {
+  const jsonStr = process.env.CREDENTIAL_JSON || '{}';
+  const credentials = JSON.parse(jsonStr);
+  
+  // Fix for private key newlines if they are literal \n
+  const privateKey = credentials.private_key?.replace(/\\n/g, '\n');
+
+  if (!credentials.client_email || !privateKey) {
+    console.error("[Drive Auth] ❌ Faltan credenciales (email o private_key)");
+  }
+
+  const auth = new google.auth.JWT({
+    email: credentials.client_email,
+    key: privateKey,
+    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+  });
+
+  return google.drive({ version: 'v3', auth });
+}

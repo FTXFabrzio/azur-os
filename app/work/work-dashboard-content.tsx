@@ -14,6 +14,7 @@ import {
   Settings,
   Plus
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -53,6 +54,8 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedInitialDate, setSelectedInitialDate] = useState<Date | undefined>(undefined);
+  console.log("WorkDashboardContent rendering. user:", user);
   const displayUser = {
     id: user?.id,
     name: user?.name || "Usuario",
@@ -113,9 +116,13 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
       
       <NewMeetingDialog 
         open={isNewMeetingOpen} 
-        onOpenChange={setIsNewMeetingOpen} 
+        onOpenChange={(open) => {
+          setIsNewMeetingOpen(open);
+          if (!open) setSelectedInitialDate(undefined);
+        }} 
         userId={displayUser.id} 
         mutate={mutate}
+        initialDate={selectedInitialDate}
       />
       
       <ProfileConfigDialog 
@@ -210,20 +217,31 @@ export function WorkDashboardContent({ initialMeetings, user }: WorkDashboardCon
             meetings={augmentedMeetings as any} 
             onEventClick={handleEventClick} 
             onStatusUpdate={handleStatusUpdate}
+            onDateChange={setSelectedInitialDate}
           />
         </div>
 
       </div>
 
       {/* Floating Action Button for New Task */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <motion.div 
+        key={selectedInitialDate?.toISOString()}
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          type: "spring",
+          stiffness: 260,
+          damping: 20 
+        }}
+        className="fixed bottom-6 right-6 z-50"
+      >
         <Button 
           onClick={() => setIsNewMeetingOpen(true)}
           className="bg-[#D32F2F] hover:bg-red-700 text-white rounded-full h-14 w-14 shadow-[0_8px_20px_-6px_rgba(220,38,38,0.6)] active:scale-95 transition-all flex items-center justify-center"
         >
           <Plus className="h-7 w-7" strokeWidth={3} />
         </Button>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "Azur OS",
   description: "Arquitectura Frontend Experta - Next.js 15 PWA",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icono.ico",
+    apple: "/icons/icono.ico",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

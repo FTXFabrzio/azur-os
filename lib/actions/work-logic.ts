@@ -261,3 +261,119 @@ export async function sendChatMessage(meetingId: string, userId: string, content
     return { success: false, error: "Error al enviar mensaje" };
   }
 }
+
+// 5. INTELIGENCIA DE AGENDA Y CONFLICTOS
+export async function getMeetingConflicts(data: {
+  participantIds: string[];
+  startDatetime: string;
+  endDatetime: string;
+  type: "VIRTUAL" | "PRESENCIAL";
+}) {
+  try {
+    const bufferMinutes = data.type === "PRESENCIAL" ? 90 : 30;
+    const start = new Date(data.startDatetime);
+    const end = new Date(data.endDatetime);
+
+    // Get all meetings for these participants on the same day
+    const dayStart = new Date(start);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(start);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const relatedMeetings = await db.query.meetings.findMany({
+      where: and(
+        sql`${meetings.startDatetime} >= ${dayStart.toISOString()}`,
+        sql`${meetings.startDatetime} <= ${dayEnd.toISOString()}`
+      ),
+      with: {
+        participants: true
+      }
+    });
+
+    const conflicts: { userId: string; userName: string; start: string; end: string; type: string }[] = [];
+
+    // Filter meetings where any of our participants are involved
+    for (const meeting of relatedMeetings) {
+      const participantIdsInMeeting = [meeting.createdBy, ...(meeting.participants?.map(p => p.userId) || [])];
+      const conflictParticipants = data.participantIds.filter(id => participantIdsInMeeting.includes(id));
+
+      if (conflictParticipants.length > 0) {
+        const mStart = new Date(meeting.startDatetime);
+        const mEnd = new Date(meeting.endDatetime);
+
+        // Check for buffer conflict
+        // Violation if: T1_start < T2_end + buffer AND T2_start < T1_end + buffer
+        const t1Start = start.getTime();
+        const t1End = end.getTime();
+        const t2Start = mStart.getTime();
+        const t2End = mEnd.getTime();
+        const bufferMs = bufferMinutes * 60 * 1000;
+
+        if (t1Start < (t2End + bufferMs) && t2Start < (t1End + bufferMs)) {
+          // It's a conflict!
+          const userInConflict = await db.query.users.findFirst({
+            where: inArray(users.id, conflictParticipants)
+          });
+          
+          conflicts.push({
+            userId: conflictParticipants[0],
+            userName: userInConflict?.name || "Un participante",
+            start: meeting.startDatetime,
+            end: meeting.endDatetime,
+            type: t1Start < t2End && t2Start < t1End ? "TRASLAPE" : "BUFFER"
+          });
+        }
+      }
+    }
+
+    return conflicts;
+  } catch (error) {
+    console.error("Error checking conflicts:", error);
+    return [];
+  }
+}
+
+export async function getRecommendedSlots(data: {
+  participantIds: string[];
+  date: string;
+  durationMinutes: number;
+  type: "VIRTUAL" | "PRESENCIAL";
+}) {
+  try {
+    const dayStart = new Date(data.date);
+    dayStart.setHours(8, 0, 0, 0); // Standard working day start
+    
+    const possibleSlots: { start: string; end: string }[] = [];
+    const bufferMinutes = data.type === "PRESENCIAL" ? 90 : 30;
+    
+    // Check every 30 mins slot
+    for (let h = 8; h <= 17; h++) {
+      for (const m of [0, 30]) {
+        const start = new Date(dayStart);
+        start.setHours(h, m, 0, 0);
+        const end = new Date(start.getTime() + data.durationMinutes * 60 * 1000);
+        
+        const currentConflicts = await getMeetingConflicts({
+          participantIds: data.participantIds,
+          startDatetime: start.toISOString(),
+          endDatetime: end.toISOString(),
+          type: data.type
+        });
+        
+        if (currentConflicts.length === 0) {
+          possibleSlots.push({
+            start: start.toISOString(),
+            end: end.toISOString()
+          });
+          if (possibleSlots.length >= 5) break; // MVP: Return first 5 slots
+        }
+      }
+      if (possibleSlots.length >= 5) break;
+    }
+    
+    return possibleSlots;
+  } catch (error) {
+    console.error("Error getting recommended slots:", error);
+    return [];
+  }
+}
