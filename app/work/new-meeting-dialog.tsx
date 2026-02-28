@@ -103,12 +103,18 @@ export function NewMeetingDialog({
       });
       setSelectedDate(initialDate || startOfToday());
       setStartTime("09:00");
-      setDuration(60);
+      setDuration(90); // Default to 90 for PRESENCIAL
       setPlatform("Meet");
       setConflicts([]);
       setRecommendedSlots([]);
     }
   }, [open, initialDate]);
+
+  // Handle default duration when type changes
+  useEffect(() => {
+    if (!open) return;
+    setDuration(formData.type === "PRESENCIAL" ? 90 : 30);
+  }, [formData.type, open]);
 
   // Conflict Checking Effect
   useEffect(() => {

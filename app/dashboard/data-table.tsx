@@ -30,6 +30,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   filterColumn?: string
+  secondaryFilterColumn?: string
   dateFilter?: boolean
 }
 
@@ -37,6 +38,7 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   filterColumn,
+  secondaryFilterColumn,
   dateFilter,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -65,18 +67,31 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between py-2 gap-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between py-3 px-1 gap-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
             {filterColumn && (
             <div className="relative w-full sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                    placeholder={`Filtrar por ${filterColumn}...`}
+                    placeholder={`Filtrar por nombre...`}
                     value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""}
                     onChange={(event) =>
                     table.getColumn(filterColumn)?.setFilterValue(event.target.value)
                     }
                     className="pl-10 h-10 bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20 text-slate-900 rounded-xl text-xs font-bold shadow-sm"
+                />
+            </div>
+            )}
+            {secondaryFilterColumn && (
+            <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                    placeholder={`Filtrar por ID Kommo...`}
+                    value={(table.getColumn(secondaryFilterColumn)?.getFilterValue() as string) ?? ""}
+                    onChange={(event) =>
+                    table.getColumn(secondaryFilterColumn)?.setFilterValue(event.target.value)
+                    }
+                    className="pl-10 h-10 bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20 text-slate-900 rounded-xl text-xs font-bold shadow-sm font-mono"
                 />
             </div>
             )}

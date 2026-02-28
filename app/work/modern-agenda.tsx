@@ -276,17 +276,17 @@ export function ModernAgenda({ meetings, onEventClick, onStatusUpdate, onNewMeet
                     </div>
 
                     {/* Meta Info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-                        <Clock className="h-4 w-4 text-blue-300/80 shrink-0" />
-                        <span>
-                          {format(new Date(meeting.startDatetime), "h:mm a")}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 truncate">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 min-w-0">
                         <MapPin className="h-4 w-4 text-slate-300 shrink-0" />
                         <span className="truncate">{meeting.address}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                        <Clock className="h-4 w-4 text-blue-300/80 shrink-0" />
+                        <span className="tabular-nums">
+                          {format(new Date(meeting.startDatetime), "hh:mm a")} - {format(new Date(meeting.endDatetime), "hh:mm a")}
+                        </span>
                       </div>
                     </div>
                     

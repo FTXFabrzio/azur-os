@@ -10,6 +10,11 @@ const withSerwist = withSerwistInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
 };
 
 // Serwist disabled manually for now to avoid build failures with SW generation.

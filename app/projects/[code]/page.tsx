@@ -1,4 +1,5 @@
-import ModelViewer from "@/components/projects/ModelViewer";
+import dynamic from "next/dynamic";
+const ModelViewer = dynamic(() => import("@/components/projects/ModelViewer"), { ssr: false });
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";

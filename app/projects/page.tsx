@@ -1,14 +1,18 @@
 import { ProjectForm } from "@/components/projects/ProjectForm";
 import { CircuitBackground } from "@/components/ui/CircuitBackground";
+import { Suspense } from "react";
+import Loading from "./loading";
 
 export default function ProjectsPage() {
   return (
-    <main className="min-h-screen bg-black flex items-center justify-center relative select-none">
+    <main className="min-h-screen bg-[#0A0A0A] flex items-center justify-center relative select-none">
       {/* Immersive background with circuits */}
       <CircuitBackground />
 
       {/* Main Content */}
-      <ProjectForm />
+      <Suspense fallback={<Loading />}>
+        <ProjectForm />
+      </Suspense>
 
       {/* Corner accents for the "almost full screen card" feeling */}
       <div className="fixed top-0 left-0 w-full h-full border-[20px] border-black pointer-events-none z-30 opacity-50" />

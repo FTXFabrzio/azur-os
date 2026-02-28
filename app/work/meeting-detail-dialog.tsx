@@ -141,16 +141,23 @@ export function MeetingDetailDialog({
                {meeting.clientName}
              </DialogTitle>
              
-             <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500">
-                <div className="flex items-center gap-1.5 truncate max-w-[200px]">
+              <div className="flex flex-col gap-2.5 text-[11px] font-medium text-slate-500 mt-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span className="truncate">{meeting.address}</span>
+                  <span className="truncate text-slate-600 font-semibold">{meeting.address}</span>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100 w-fit">
                   <Clock className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{new Date(meeting.startDatetime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  <span className="font-bold text-slate-700 tabular-nums">
+                    {new Date(meeting.startDatetime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})} - 
+                    {new Date(meeting.endDatetime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: true})}
+                  </span>
+                  <div className="h-3 w-[1px] bg-slate-200 mx-1" />
+                  <span className="text-[10px] font-black text-red-600">
+                    {Math.round((new Date(meeting.endDatetime).getTime() - new Date(meeting.startDatetime).getTime()) / 60000)} MIN
+                  </span>
                 </div>
-             </div>
+              </div>
           </div>
           
 

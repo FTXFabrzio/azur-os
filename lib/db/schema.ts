@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, unique, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, unique, primaryKey, index, real } from "drizzle-orm/sqlite-core";
 import { sql, relations } from "drizzle-orm";
 
 export const users = sqliteTable("users", {
@@ -91,3 +91,113 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
+export const proyectos = sqliteTable("proyectos", {
+  id: text("id").primaryKey(),
+  nombre: text("nombre").notNull(),
+  codigo: text("codigo").notNull().unique(),
+  driveFolderLink: text("drive_folder_link"),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const proyectosRelations = relations(proyectos, ({ many }) => ({
+  archivos: many(archivosProyectos),
+}));
+
+export const archivosProyectos = sqliteTable("archivos_proyectos", {
+  id: text("id").primaryKey(),
+  proyectoId: text("proyecto_id").notNull().references(() => proyectos.id, { onDelete: "cascade" }),
+  etiqueta: text("etiqueta"),
+  descripcion: text("descripcion"),
+  driveFileLink: text("drive_file_link").notNull(),
+  pesoKb: integer("peso_kb"),
+  prioridad: integer("prioridad").default(1),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const archivosProyectosRelations = relations(archivosProyectos, ({ one }) => ({
+  proyecto: one(proyectos, {
+    fields: [archivosProyectos.proyectoId],
+    references: [proyectos.id],
+  }),
+}));
+
+export const leads = sqliteTable("leads", {
+  id: text("id").primaryKey(),
+  kommoId: text("kommo_id").unique().notNull(),
+  brand: text("brand", { enum: ["AZUR", "COCINAPRO"] }).notNull(),
+  category: text("category", { enum: [
+    'SERVICE_OFFER', 
+    'JOB_CANDIDATE', 
+    'NO_RESPONSE', 
+    'NOT_INTERESTED', 
+    'CONFUSED', 
+    'POTENTIAL_CLIENT',
+    'MANUAL_FOLLOW_UP'
+  ] }).notNull(),
+  contactName: text("contact_name").notNull(),
+  phone: text("phone"), // Nuevo campo celular
+  leadEntryDate: text("lead_entry_date"), // Nuevo campo fecha ingreso manual
+  status: text("status", { enum: ['PENDING', 'ARCHIVED', 'WAITING_FOR_DATE', 'SCHEDULED', 'ON_HOLD', 'IN_EXECUTION'] }).default('PENDING'),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  brandIdx: index("idx_leads_brand").on(table.brand),
+  categoryIdx: index("idx_leads_category").on(table.category),
+}));
+
+export const leadsRelations = relations(leads, ({ one }) => ({
+  prospect: one(clientProspects, {
+    fields: [leads.id],
+    references: [clientProspects.leadId],
+  }),
+  businessResource: one(businessResources, {
+    fields: [leads.id],
+    references: [businessResources.leadId],
+  }),
+  discardReason: one(leadDiscardReasons, {
+    fields: [leads.id],
+    references: [leadDiscardReasons.leadId],
+  }),
+}));
+
+export const clientProspects = sqliteTable("client_prospects", {
+  leadId: text("lead_id").primaryKey().references(() => leads.id, { onDelete: "cascade" }),
+  address: text("address"),
+  squareMeters: real("square_meters"),
+  materials: text("materials"),
+  hasBlueprints: integer("has_blueprints", { mode: "boolean" }).default(false),
+  requirementsDetail: text("requirements_detail"),
+});
+
+export const clientProspectsRelations = relations(clientProspects, ({ one }) => ({
+  lead: one(leads, {
+    fields: [clientProspects.leadId],
+    references: [leads.id],
+  }),
+}));
+
+export const businessResources = sqliteTable("business_resources", {
+  leadId: text("lead_id").primaryKey().references(() => leads.id, { onDelete: "cascade" }),
+  companyName: text("company_name"),
+  offerDetails: text("offer_details"),
+  cvAnalysisSummary: text("cv_analysis_summary"),
+  fileUrl: text("file_url"),
+});
+
+export const businessResourcesRelations = relations(businessResources, ({ one }) => ({
+  lead: one(leads, {
+    fields: [businessResources.leadId],
+    references: [leads.id],
+  }),
+}));
+
+export const leadDiscardReasons = sqliteTable("lead_discard_reasons", {
+  leadId: text("lead_id").primaryKey().references(() => leads.id, { onDelete: "cascade" }),
+  reasonDetail: text("reason_detail"),
+});
+
+export const leadDiscardReasonsRelations = relations(leadDiscardReasons, ({ one }) => ({
+  lead: one(leads, {
+    fields: [leadDiscardReasons.leadId],
+    references: [leads.id],
+  }),
+}));

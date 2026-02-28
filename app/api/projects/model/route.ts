@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getGoogleDriveClient } from "@/lib/google-drive";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { code: string } | any }
+  request: NextRequest
 ) {
   try {
-    const { code } = await params;
     const drive = await getGoogleDriveClient();
     
     // We need to find the file ID again or pass it. 
@@ -21,7 +19,7 @@ export async function GET(
     }
 
     const response = await drive.files.get(
-      { fileId, alt: 'media' },
+      { fileId, alt: 'media', supportsAllDrives: true },
       { responseType: 'stream' }
     );
 
