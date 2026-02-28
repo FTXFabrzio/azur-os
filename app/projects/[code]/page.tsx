@@ -1,5 +1,4 @@
-import dynamic from "next/dynamic";
-const ModelViewer = dynamic(() => import("@/components/projects/ModelViewer"), { ssr: false });
+import ModelViewerDynamic from "@/components/projects/ModelViewerDynamic";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -25,7 +24,7 @@ export default async function ProjectDetailPage({
     <main className="h-screen w-screen flex flex-col bg-[#0A0A0A] overflow-hidden relative">
       {/* Immersive View */}
       <div className="flex-1 w-full h-full relative">
-        <ModelViewer src={modelSrc} />
+        <ModelViewerDynamic src={modelSrc} />
       </div>
 
       {/* Control Overlay */}
