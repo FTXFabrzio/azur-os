@@ -1,8 +1,8 @@
-"use server"
+"use server" 
 
 import { db } from "@/lib/db";
-import { leads, clientProspects, businessResources, leadDiscardReasons } from "@/lib/db/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { leads, clientProspects, businessResources, leadDiscardReasons, discardedLeadsStats } from "@/lib/db/schema";
+import { eq, sql, desc, and, like, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function getLeads() {
@@ -22,49 +22,104 @@ export async function getLeads() {
   }
 }
 
-export async function getLeadsStats() {
+export async function getLeadsStats(period?: string) {
   try {
-    const totalLeads = await db.select({ count: sql<number>`count(*)` }).from(leads);
-    const toSchedule = await db.select({ count: sql<number>`count(*)` }).from(leads).where(eq(leads.status, 'PENDING'));
-    const waiting = await db.select({ count: sql<number>`count(*)` }).from(leads).where(eq(leads.status, 'WAITING_FOR_DATE'));
-    const inExecution = await db.select({ count: sql<number>`count(*)` }).from(leads).where(eq(leads.status, 'IN_EXECUTION'));
-    const onHold = await db.select({ count: sql<number>`count(*)` }).from(leads).where(eq(leads.status, 'ON_HOLD'));
+    const activePeriod = period || "MARZO"; // Default to current busy month
+
+    const periodFilter = eq(leads.period, activePeriod);
+
+    const totalLeads = await db.select({ count: sql<number>`count(*)` }).from(leads).where(periodFilter);
+    const toSchedule = await db.select({ count: sql<number>`count(*)` }).from(leads).where(and(eq(leads.status, 'PENDING'), periodFilter));
+    const waiting = await db.select({ count: sql<number>`count(*)` }).from(leads).where(and(eq(leads.status, 'WAITING_FOR_DATE'), periodFilter));
+    const inExecution = await db.select({ count: sql<number>`count(*)` }).from(leads).where(and(eq(leads.status, 'IN_EXECUTION'), periodFilter));
+    const onHold = await db.select({ count: sql<number>`count(*)` }).from(leads).where(and(eq(leads.status, 'ON_HOLD'), periodFilter));
     
-    // Noise: CONFUSED + NOT_INTERESTED
-    const noiseLeads = await db.select({ count: sql<number>`count(*)` }).from(leads).where(
-      sql`${leads.category} IN ('CONFUSED', 'NOT_INTERESTED')`
+    // Noise in active leads: CONFUSED + NOT_INTERESTED
+    const noiseLeadsActive = await db.select({ count: sql<number>`count(*)` }).from(leads).where(
+      and(sql`${leads.category} IN ('CONFUSED', 'NOT_INTERESTED')`, periodFilter)
     );
 
-    const brands = await db.select({ 
+    const brandsActive = await db.select({ 
       brand: leads.brand, 
       count: sql<number>`count(*)` 
-    }).from(leads).groupBy(leads.brand);
+    }).from(leads).where(periodFilter).groupBy(leads.brand);
 
-    const categories = await db.select({
+    const categoriesActive = await db.select({
       category: leads.category,
       count: sql<number>`count(*)`
-    }).from(leads).groupBy(leads.category);
+    }).from(leads).where(periodFilter).groupBy(leads.category);
 
-    const azurCount = brands.find(b => b.brand === 'AZUR')?.count || 0;
-    const cocinaCount = brands.find(b => b.brand === 'COCINAPRO')?.count || 0;
+    // Get Historical Discarded Stats for the same period
+    const discardedAggregated = await db.select({
+      brand: discardedLeadsStats.brand,
+      category: discardedLeadsStats.category,
+      reason: discardedLeadsStats.reason,
+      count: sql<number>`count(*)`
+    })
+    .from(discardedLeadsStats)
+    .where(eq(discardedLeadsStats.period, activePeriod))
+    .groupBy(discardedLeadsStats.brand, discardedLeadsStats.category, discardedLeadsStats.reason);
+
+    // Calculation logic
+    let totalDiscarded = 0;
+    let azurDiscarded = 0;
+    let cocinaDiscarded = 0;
+    const combinedCategories: Record<string, number> = {};
+    const combinedDiscardReasons: Record<string, number> = {};
+    
+    // Add active leads to categories
+    categoriesActive.forEach(c => {
+        combinedCategories[c.category] = (combinedCategories[c.category] || 0) + c.count;
+    });
+
+    // Add discarded to totals, brands, categories and reasons
+    discardedAggregated.forEach(curr => {
+        const count = curr.count;
+        totalDiscarded += count;
+        if (curr.brand === 'AZUR') azurDiscarded += count;
+        if (curr.brand === 'COCINAPRO') cocinaDiscarded += count;
+        
+        combinedCategories[curr.category] = (combinedCategories[curr.category] || 0) + count;
+        if (curr.reason) combinedDiscardReasons[curr.reason] = (combinedDiscardReasons[curr.reason] || 0) + count;
+    });
+
+    const finalTotal = totalLeads[0].count + totalDiscarded;
+    const azurTotal = (brandsActive.find(b => b.brand === 'AZUR')?.count || 0) + azurDiscarded;
+    const cocinaTotal = (brandsActive.find(b => b.brand === 'COCINAPRO')?.count || 0) + cocinaDiscarded;
+
+    // Noise calculation including discarded ones (CONFUSED or NOT_INTERESTED or explicitly discarded categories that mapping here)
+    const noiseLeadsDiscarded = discardedAggregated
+        .filter(d => d.category === 'CONFUSED' || d.category === 'NOT_INTERESTED')
+        .reduce((sum, d) => sum + d.count, 0);
 
     return {
-      total: totalLeads[0].count,
+      total: finalTotal,
       toSchedule: toSchedule[0].count,
       waiting: waiting[0].count,
       inExecution: inExecution[0].count,
       onHold: onHold[0].count,
-      noiseRate: totalLeads[0].count > 0 ? (noiseLeads[0].count / totalLeads[0].count) * 100 : 0,
-      azurCount,
-      cocinaCount,
-      categories: categories.reduce((acc: any, curr) => {
-        acc[curr.category] = curr.count;
-        return acc;
-      }, {}),
+      totalDiscarded: totalDiscarded,
+      noiseRate: finalTotal > 0 ? ((noiseLeadsActive[0].count + noiseLeadsDiscarded) / finalTotal) * 100 : 0,
+      azurCount: azurTotal,
+      cocinaCount: cocinaTotal,
+      categories: combinedCategories,
+      discardReasons: combinedDiscardReasons,
     };
   } catch (error) {
     console.error("Error fetching lead stats:", error);
-    return { total: 0, toSchedule: 0, noiseRate: 0, azurCount: 0, cocinaCount: 0 };
+    return { 
+      total: 0, 
+      toSchedule: 0, 
+      waiting: 0, 
+      inExecution: 0, 
+      onHold: 0, 
+      totalDiscarded: 0,
+      noiseRate: 0, 
+      azurCount: 0, 
+      cocinaCount: 0, 
+      categories: {}, 
+      discardReasons: {} 
+    };
   }
 }
 
@@ -82,6 +137,7 @@ export async function createLead(data: any) {
                 contactName: data.contactName,
                 phone: data.phone,
                 leadEntryDate: data.leadEntryDate,
+                period: data.period || "FEBRERO",
                 status: 'PENDING',
             });
 
@@ -132,6 +188,7 @@ export async function updateLead(id: string, data: any) {
                     phone: data.phone,
                     leadEntryDate: data.leadEntryDate,
                     status: data.status,
+                    subStatus: data.subStatus,
                 })
                 .where(eq(leads.id, id));
 
@@ -174,15 +231,69 @@ export async function updateLead(id: string, data: any) {
     }
 }
 
-export async function archiveLead(id: string) {
+// "Archive" renamed/modified to "Delete and Record"
+export async function archiveLead(id: string, reason: string, category: string, period: string) {
     try {
-        await db.update(leads)
-            .set({ status: 'ARCHIVED' })
-            .where(eq(leads.id, id));
+        await db.transaction(async (tx) => {
+            // 1. Get lead data before deleting
+            const leadData = await tx.select({ 
+                brand: leads.brand,
+                kommoId: leads.kommoId,
+                contactName: leads.contactName,
+                phone: leads.phone
+            }).from(leads).where(eq(leads.id, id)).get();
+            
+            if (leadData) {
+                // 2. Record the discard event in historical stats with full audit data
+                await tx.insert(discardedLeadsStats).values({
+                    id: crypto.randomUUID(),
+                    brand: leadData.brand,
+                    category: category || 'NO_RESPONSE',
+                    reason: reason,
+                    period: period,
+                    kommoId: leadData.kommoId,
+                    contactName: leadData.contactName,
+                    phone: leadData.phone,
+                    discardedAt: new Date().toISOString()
+                });
+            }
+
+            // 3. Delete from leads (cascade handles extensions)
+            await tx.delete(leads).where(eq(leads.id, id));
+        });
         revalidatePath('/dashboard');
         return { success: true };
     } catch (error) {
-        console.error("Error archiving lead:", error);
+        console.error("Error deleting lead:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function createDirectDiscard(data: {
+    brand: "AZUR" | "COCINAPRO",
+    category: string,
+    reason: string,
+    period: string,
+    kommoId?: string,
+    contactName?: string,
+    phone?: string
+}) {
+    try {
+        await db.insert(discardedLeadsStats).values({
+            id: crypto.randomUUID(),
+            brand: data.brand,
+            category: data.category,
+            reason: data.reason,
+            period: data.period,
+            kommoId: data.kommoId,
+            contactName: data.contactName,
+            phone: data.phone,
+            discardedAt: new Date().toISOString()
+        });
+        revalidatePath('/dashboard');
+        return { success: true };
+    } catch (error) {
+        console.error("Error creating historical record:", error);
         return { success: false, error: (error as Error).message };
     }
 }
@@ -211,7 +322,19 @@ export async function putOnHold(id: string) {
         return { success: false, error: (error as Error).message };
     }
 }
-export async function updateLeadStatus(id: string, status: 'PENDING' | 'ARCHIVED' | 'WAITING_FOR_DATE' | 'SCHEDULED' | 'ON_HOLD' | 'IN_EXECUTION', note?: string) {
+export async function updateLeadSubStatus(id: string, subStatus: 'SIN_FECHA' | 'ESPERANDO_RESPUESTA' | 'EN_EJECUCION') {
+    try {
+        await db.update(leads)
+            .set({ subStatus })
+            .where(eq(leads.id, id));
+        revalidatePath('/dashboard');
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating subStatus:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+export async function updateLeadStatus(id: string, status: 'PENDING' | 'ARCHIVED' | 'WAITING_FOR_DATE' | 'SCHEDULED' | 'ON_HOLD' | 'IN_EXECUTION' | 'REVISION', note?: string) {
     try {
         await db.transaction(async (tx) => {
             await tx.update(leads)
@@ -237,5 +360,51 @@ export async function updateLeadStatus(id: string, status: 'PENDING' | 'ARCHIVED
     } catch (error) {
         console.error("Error updating lead status:", error);
         return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function updateLeadKanbanStep(id: string, kanbanStep: number) {
+    try {
+        await db.update(leads)
+            .set({ kanbanStep })
+            .where(eq(leads.id, id));
+        revalidatePath('/dashboard');
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating kanbanStep:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function updateLeadCategory(id: string, category: 'SERVICE_OFFER' | 'JOB_CANDIDATE' | 'NO_RESPONSE' | 'NOT_INTERESTED' | 'CONFUSED' | 'POTENTIAL_CLIENT' | 'MANUAL_FOLLOW_UP' | 'LEAD_ALL' | 'REVISION') {
+    try {
+        await db.update(leads)
+            .set({ category })
+            .where(eq(leads.id, id));
+        revalidatePath('/dashboard');
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating category:", error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+export async function searchDiscardedLeads(searchTerm: string) {
+    try {
+        const term = searchTerm.trim();
+        const condition = term ? or(
+            like(discardedLeadsStats.kommoId, `%${term}%`),
+            like(discardedLeadsStats.contactName, `%${term}%`)
+        ) : undefined;
+        
+        const results = await db.select()
+            .from(discardedLeadsStats)
+            .where(condition)
+            .orderBy(desc(discardedLeadsStats.discardedAt))
+            .limit(100);
+        return results;
+    } catch (error) {
+        console.error("Error searching discarded leads:", error);
+        return [];
     }
 }

@@ -23,7 +23,8 @@ import {
   Pencil,
   MessageSquareMore,
   ExternalLink,
-  Zap
+  Zap,
+  Trash2
 } from "lucide-react"
 import {
     Tooltip,
@@ -197,7 +198,7 @@ export const meetingColumns: ColumnDef<Meeting>[] = [
   },
   {
     accessorKey: "status",
-    header: "Estado",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
     cell: ({ row }) => {
       const status = row.original.status as string
       let className = ""
@@ -355,10 +356,13 @@ export type Lead = {
   phone: string | null;
   leadEntryDate: string | null;
   status: string | null;
+  subStatus?: 'SIN_FECHA' | 'ESPERANDO_RESPUESTA' | 'EN_EJECUCION';
   createdAt: string | null;
   prospect?: any;
   businessResource?: any;
   discardReason?: any;
+  period?: string;
+  kanbanStep?: number;
 }
 
 export const leadColumns: (
@@ -488,6 +492,9 @@ export const leadColumns: (
         case 'MANUAL_FOLLOW_UP':
           className = "bg-amber-50 text-amber-600 border-amber-200"
           break
+        case 'LEAD_ALL':
+          className = "bg-cyan-50 text-cyan-600 border-cyan-100"
+          break
         default:
           className = "bg-slate-50 text-slate-500 border-slate-100"
       }
@@ -503,7 +510,7 @@ export const leadColumns: (
   },
   {
     accessorKey: "status",
-    header: "Estado",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Estado" />,
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       const reason = row.original.discardReason?.reasonDetail;
@@ -553,16 +560,16 @@ export const leadColumns: (
   {
     id: "actions",
     cell: ({ row }) => (
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2 md:gap-3">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100"
+              className="h-11 w-11 md:h-8 md:w-8 p-0 rounded-xl md:rounded-lg hover:bg-slate-100 bg-slate-50 md:bg-transparent shadow-sm md:shadow-none"
               onClick={() => onView(row.original)}
             >
-              <Eye className="h-4 w-4 text-slate-400" />
+              <Eye className="h-4 w-4 md:h-4 md:w-4 text-slate-500" />
             </Button>
           </TooltipTrigger>
           <TooltipContent className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest border-none">Ver Detalles</TooltipContent>
@@ -573,69 +580,13 @@ export const leadColumns: (
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 w-8 p-0 rounded-lg hover:bg-emerald-50 hover:text-emerald-600"
-              onClick={() => onAttempt(row.original)}
-            >
-              <MessageSquareMore className="h-3.5 w-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest border-none">Seguimiento Manual</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 rounded-lg hover:bg-amber-50 hover:text-amber-600"
+              className="h-11 w-11 md:h-8 md:w-8 p-0 rounded-xl md:rounded-lg hover:bg-amber-50 hover:text-amber-600 bg-amber-50/50 md:bg-transparent shadow-sm md:shadow-none"
               onClick={() => onEdit(row.original)}
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5 text-amber-600" />
             </Button>
           </TooltipTrigger>
           <TooltipContent className="bg-amber-500 text-white font-black text-[10px] uppercase tracking-widest border-none">Editar Lead</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 rounded-lg hover:bg-blue-50 hover:text-blue-600"
-              onClick={() => onSchedule(row.original)}
-            >
-              <CalendarCheck className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-blue-600 text-white font-black text-[10px] uppercase tracking-widest border-none">Agendar Cita</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 rounded-lg hover:bg-orange-50 hover:text-orange-600"
-              onClick={() => onHold(row.original)}
-            >
-              <Zap className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-orange-600 text-white font-black text-[10px] uppercase tracking-widest border-none">Poner en Revisión</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 rounded-lg hover:bg-red-50 hover:text-red-600"
-              onClick={() => onArchive(row.original)}
-            >
-              <Archive className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-red-600 text-white font-black text-[10px] uppercase tracking-widest border-none">Archivar Lead</TooltipContent>
         </Tooltip>
       </div>
     ),

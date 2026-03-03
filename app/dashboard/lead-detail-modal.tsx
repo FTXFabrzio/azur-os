@@ -24,7 +24,8 @@ import {
     Phone,
     Search,
     Filter,
-    Zap
+    Zap,
+    Copy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Lead } from "./columns";
@@ -112,13 +113,37 @@ export function LeadDetailModal({ open, onOpenChange, lead, onSchedule, onHold }
                    </div>
                 </div>
             </div>
-            <Button 
-                variant="ghost" 
-                className="h-10 w-10 p-0 rounded-2xl hover:bg-white/10 text-white/50 hover:text-white transition-all"
-                onClick={() => onOpenChange(false)}
-            >
-                <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+                <Button 
+                    variant="ghost" 
+                    className="h-10 w-10 p-0 rounded-2xl bg-white/5 hover:bg-white/10 text-white hover:text-white transition-all border border-white/10 shadow-lg"
+                    onClick={() => {
+                        const text = `📌 ID KOMMO: ${truncateId(lead.kommoId)}
+👤 CLIENTE: ${lead.contactName}
+🏢 MARCA: ${lead.brand}
+🏷️ CATEGORÍA: ${lead.category.replace(/_/g, ' ')}
+⏱️ EN ESPERA: ${daysWaiting} DÍAS
+📞 TELÉFONO: ${lead.phone || '---'}
+📅 INGRESO: ${lead.leadEntryDate || '---'}
+📍 DIRECCIÓN DE OBRA: ${lead.prospect?.address || '---'}
+📐 METRAJE ESTIMADO: ${lead.prospect?.squareMeters || 0} m²
+📝 PLANOS TÉCNICOS: ${lead.prospect?.hasBlueprints ? 'SÍ CUENTA' : 'NO CUENTA'}
+⚙️ REQUERIMIENTOS: ${lead.prospect?.requirementsDetail || '---'}
+${lead.discardReason?.reasonDetail ? `⚠️ NOTAS: ${lead.discardReason.reasonDetail}` : ''}`;
+                        navigator.clipboard.writeText(text);
+                    }}
+                    title="Copiar Datos para Superior"
+                >
+                    <Copy className="h-4 w-4" />
+                </Button>
+                <Button 
+                    variant="ghost" 
+                    className="h-10 w-10 p-0 rounded-2xl hover:bg-white/10 text-white/50 hover:text-white transition-all"
+                    onClick={() => onOpenChange(false)}
+                >
+                    <X className="h-5 w-5" />
+                </Button>
+            </div>
           </div>
           {/* Decorative background element */}
           <div className="absolute top-0 right-0 p-8 opacity-5">

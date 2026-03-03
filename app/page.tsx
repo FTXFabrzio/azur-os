@@ -9,6 +9,8 @@ export default async function LoginPage() {
   if (session) {
     if (session.username === 'fortex') {
       redirect("/dashboard");
+    } else if (session.username === 'manager') {
+      redirect("/dashboardmanager");
     } else {
       redirect("/work");
     }

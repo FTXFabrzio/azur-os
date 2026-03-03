@@ -6,7 +6,7 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role", { enum: ["CEO", "ARCHITECT", "COMMERCIAL", "ADMIN"] }).notNull(),
+  role: text("role", { enum: ["CEO", "ARCHITECT", "COMMERCIAL", "ADMIN", "SALES_MANAGER"] }).notNull(),
   phone: text("phone"),
   isAvailableEarly: integer("is_available_early", { mode: "boolean" }).default(false),
   pushSubscription: text("push_subscription"),
@@ -132,12 +132,29 @@ export const leads = sqliteTable("leads", {
     'NOT_INTERESTED', 
     'CONFUSED', 
     'POTENTIAL_CLIENT',
-    'MANUAL_FOLLOW_UP'
+    'MANUAL_FOLLOW_UP',
+    'LEAD_ALL',
+    'REVISION'
   ] }).notNull(),
   contactName: text("contact_name").notNull(),
   phone: text("phone"), // Nuevo campo celular
   leadEntryDate: text("lead_entry_date"), // Nuevo campo fecha ingreso manual
-  status: text("status", { enum: ['PENDING', 'ARCHIVED', 'WAITING_FOR_DATE', 'SCHEDULED', 'ON_HOLD', 'IN_EXECUTION'] }).default('PENDING'),
+  status: text("status", { enum: [
+    'PENDING', 
+    'ARCHIVED', 
+    'WAITING_FOR_DATE', 
+    'SCHEDULED', 
+    'ON_HOLD', 
+    'IN_EXECUTION', 
+    'REVISION'
+  ] }).default('PENDING'),
+  subStatus: text("sub_status", { enum: [
+    'SIN_FECHA',
+    'ESPERANDO_RESPUESTA',
+    'EN_EJECUCION'
+  ] }),
+  period: text("period").default("MARZO"), // Default to current
+  kanbanStep: integer("kanban_step").default(0),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 }, (table) => ({
   brandIdx: index("idx_leads_brand").on(table.brand),
@@ -201,3 +218,16 @@ export const leadDiscardReasonsRelations = relations(leadDiscardReasons, ({ one 
     references: [leads.id],
   }),
 }));
+
+export const discardedLeadsStats = sqliteTable("discarded_leads_stats", {
+  id: text("id").primaryKey(),
+  brand: text("brand", { enum: ["AZUR", "COCINAPRO"] }).notNull(),
+  category: text("category").notNull(), 
+  reason: text("reason").notNull(),
+  period: text("period").notNull(), // "FEBRERO", "MARZO", "ABRIL" etc.
+  kommoId: text("kommo_id"),
+  contactName: text("contact_name"),
+  phone: text("phone"),
+  discardedAt: text("discarded_at").default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});

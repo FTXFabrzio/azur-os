@@ -8,6 +8,8 @@ import {
   getPaginationRowModel,
   useReactTable,
   getFilteredRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   ColumnFiltersState,
 } from "@tanstack/react-table"
 
@@ -25,6 +27,7 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { Search } from "lucide-react"
 import { isSameDay } from "date-fns"
+import { cn } from "@/lib/utils"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -32,6 +35,7 @@ interface DataTableProps<TData, TValue> {
   filterColumn?: string
   secondaryFilterColumn?: string
   dateFilter?: boolean
+  renderMobileCard?: (row: any) => React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -40,6 +44,7 @@ export function DataTable<TData, TValue>({
   filterColumn,
   secondaryFilterColumn,
   dateFilter,
+  renderMobileCard,
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [date, setDate] = React.useState<DateRange | undefined>()
@@ -60,57 +65,73 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
     state: {
       columnFilters,
     },
   })
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between py-3 px-1 gap-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+    <div className="flex flex-col h-full bg-white">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-5 bg-slate-50/30 border-b border-slate-50 gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
             {filterColumn && (
-            <div className="relative w-full sm:max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className="relative w-full sm:max-w-xs shrink-0">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                    placeholder={`Filtrar por nombre...`}
+                    placeholder={`Buscar por nombre...`}
                     value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""}
                     onChange={(event) =>
                     table.getColumn(filterColumn)?.setFilterValue(event.target.value)
                     }
-                    className="pl-10 h-10 bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20 text-slate-900 rounded-xl text-xs font-bold shadow-sm"
-                />
-            </div>
-            )}
-            {secondaryFilterColumn && (
-            <div className="relative w-full sm:max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                    placeholder={`Filtrar por ID Kommo...`}
-                    value={(table.getColumn(secondaryFilterColumn)?.getFilterValue() as string) ?? ""}
-                    onChange={(event) =>
-                    table.getColumn(secondaryFilterColumn)?.setFilterValue(event.target.value)
-                    }
-                    className="pl-10 h-10 bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20 text-slate-900 rounded-xl text-xs font-bold shadow-sm font-mono"
+                    className="pl-10 h-[2.5rem] bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20 text-slate-800 rounded-xl text-sm font-medium shadow-sm transition-all"
                 />
             </div>
             )}
             {dateFilter && (
-                <div className="w-full sm:w-auto mt-2 sm:mt-0">
+                <div className="w-full sm:w-auto shrink-0">
                    <DatePickerWithRange date={date} setDate={setDate} className="w-full sm:w-[280px]" />
                 </div>
             )}
         </div>
+        {secondaryFilterColumn && (
+        <div className="relative w-full sm:max-w-[160px] shrink-0">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+                placeholder={`ID Kommo...`}
+                value={(table.getColumn(secondaryFilterColumn)?.getFilterValue() as string) ?? ""}
+                onChange={(event) =>
+                table.getColumn(secondaryFilterColumn)?.setFilterValue(event.target.value)
+                }
+                className="pl-10 h-[2.5rem] bg-white border-slate-200 focus:border-blue-500/50 focus:ring-blue-500/20 text-slate-800 rounded-xl text-sm font-medium shadow-sm transition-all font-mono"
+            />
+        </div>
+        )}
       </div>
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all">
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
-        <Table>
-          <TableHeader className="bg-slate-50/50">
+      <div className="w-full overflow-hidden">
+        {/* Vista Mobile (Tarjetas Apiladas) */}
+        {renderMobileCard && (
+          <div className="grid grid-cols-1 gap-4 md:hidden p-4">
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => renderMobileCard(row.original))
+            ) : (
+              <div className="h-24 flex items-center justify-center text-center text-slate-400 text-sm">
+                No se encontraron resultados.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Vista Desktop (Tabla) */}
+        <div className={cn("overflow-x-auto", renderMobileCard ? "hidden md:block" : "")}>
+        <Table className="border-collapse">
+          <TableHeader className="bg-white">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-b-slate-100 hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="border-b border-slate-100 hover:bg-transparent shadow-[0_1px_0_0_rgba(0,0,0,0.02)]">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="text-slate-500 font-semibold h-12">
+                    <TableHead key={header.id} className="text-slate-500 font-bold text-xs h-12 uppercase tracking-wide">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -147,9 +168,13 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
-    </div>
-      <div className="flex items-center justify-end space-x-2 py-2">
+      <div className="flex items-center justify-between space-x-2 p-5 border-t border-slate-100 bg-slate-50/30">
+        <div className="text-xs font-medium text-slate-500">
+           {table.getFilteredRowModel().rows.length} registros totales
+        </div>
+        <div className="flex items-center space-x-2">
         <Button
           variant="outline"
           size="sm"
@@ -168,6 +193,7 @@ export function DataTable<TData, TValue>({
         >
           Siguiente
         </Button>
+        </div>
       </div>
     </div>
   )
