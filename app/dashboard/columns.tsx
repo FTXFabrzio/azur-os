@@ -356,13 +356,13 @@ export type Lead = {
   phone: string | null;
   leadEntryDate: string | null;
   status: string | null;
-  subStatus?: 'SIN_FECHA' | 'ESPERANDO_RESPUESTA' | 'EN_EJECUCION';
+  subStatus?: 'SIN_FECHA' | 'ESPERANDO_RESPUESTA' | 'EN_EJECUCION' | null;
   createdAt: string | null;
   prospect?: any;
   businessResource?: any;
   discardReason?: any;
-  period?: string;
-  kanbanStep?: number;
+  period?: string | null;
+  kanbanStep?: number | null;
 }
 
 export const leadColumns: (

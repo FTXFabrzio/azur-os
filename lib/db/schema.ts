@@ -128,13 +128,13 @@ export const leads = sqliteTable("leads", {
   category: text("category", { enum: [
     'SERVICE_OFFER', 
     'JOB_CANDIDATE', 
-    'NO_RESPONSE', 
-    'NOT_INTERESTED', 
     'CONFUSED', 
     'POTENTIAL_CLIENT',
-    'MANUAL_FOLLOW_UP',
     'LEAD_ALL',
-    'REVISION'
+    'REVISION',
+    'NOT_INTERESTED',
+    'MANUAL_FOLLOW_UP',
+    'NO_RESPONSE'
   ] }).notNull(),
   contactName: text("contact_name").notNull(),
   phone: text("phone"), // Nuevo campo celular
