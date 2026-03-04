@@ -30,8 +30,10 @@ import {
   History,
   Phone,
   Eye,
+  EyeOff,
   Pencil,
-  Info
+  Info,
+  CheckCircle2
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -125,8 +127,10 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
   const [leadToEdit, setLeadToEdit] = useState<Lead | null>(null)
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false)
   const [leadToSchedule, setLeadToSchedule] = useState<Lead | null>(null)
-  const [activeView, setActiveView] = useState<'operativo' | 'kanban' | 'potenciales' | 'rechazados' | 'estadisticas'>('operativo')
+  const [activeView, setActiveView] = useState<'operativo' | 'kanban' | 'clasificados' | 'estadisticas'>('operativo')
+  const [activeClasificadosTab, setActiveClasificadosTab] = useState<'POTENTIAL_CLIENT' | 'REJECTED' | 'REVISION' | 'CLOSED_SELL'>('POTENTIAL_CLIENT')
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false)
+  const [isRevisionColumnHidden, setIsRevisionColumnHidden] = useState(false)
   const [leadToDiscard, setLeadToDiscard] = useState<Lead | null>(null)
   const [currentStats, setCurrentStats] = useState<LeadsViewProps['stats']>(stats)
   
@@ -182,6 +186,12 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
     return brandMatch && isKanbanCategory && periodMatch;
   });
 
+  const clasificadosLeads = unfilteredBrandLeads.filter(l => {
+    const brandValue = l.brand?.toUpperCase();
+    const brandMatch = activeBrandTab === "ALL" || brandValue === activeBrandTab.toUpperCase() || !brandValue;
+    return brandMatch;
+  });
+
   const columns = leadColumns(
     (l) => {
         setSelectedLead(l)
@@ -207,12 +217,12 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
     <TooltipProvider>
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Global Period Selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-[2.5rem] border border-slate-100 shadow-sm">
-           <div className="flex items-center gap-3 px-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-[2.5rem] border border-slate-100 shadow-sm">
+           <div className="flex items-center gap-3 px-2 shrink-0">
               <Calendar className="h-4 w-4 text-blue-600" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Periodo de Análisis</span>
            </div>
-           <div className="flex bg-slate-100/80 p-1 rounded-2xl md:w-fit">
+           <div className="flex bg-slate-100/80 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                {["FEBRERO", "MARZO", "ABRIL"].map((p) => (
                    <button
                        key={p}
@@ -302,24 +312,14 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
                 Flujo Ventas
             </button>
             <button 
-                onClick={() => setActiveView('potenciales')}
+                onClick={() => setActiveView('clasificados')}
                 className={cn(
                     "flex-1 md:flex-none justify-center px-6 py-2.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all gap-2 flex items-center shrink-0",
-                    activeView === 'potenciales' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                    activeView === 'clasificados' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
                 )}
             >
-                <Calendar className="h-4 w-4" />
-                Potenciales
-            </button>
-            <button 
-                onClick={() => setActiveView('rechazados')}
-                className={cn(
-                    "flex-1 md:flex-none justify-center px-6 py-2.5 rounded-[1.4rem] text-[10px] font-black uppercase tracking-widest transition-all gap-2 flex items-center shrink-0",
-                    activeView === 'rechazados' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
-                )}
-            >
-                <History className="h-4 w-4" />
-                Rechazados
+                <Filter className="h-4 w-4" />
+                Clasificados
             </button>
             <button 
                 onClick={() => setActiveView('estadisticas')}
@@ -497,7 +497,7 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
                </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-1">
+            <div className="flex overflow-x-auto gap-6 p-1 pb-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] w-full items-start">
               {[
                 { 
                     id: 'NUEVOS', 
@@ -512,22 +512,56 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
                     leads: kanbanLeads.filter(l => (l.category === 'LEAD_ALL' || l.category === 'LEAD_LIBRE') && l.status === 'REVISION') 
                 },
                 { 
-                    id: 'CLASIFICACION', 
-                    label: 'Clasificación', 
-                    color: 'bg-emerald-600', 
-                    leads: kanbanLeads.filter(l => (l.category === 'REVISION' || l.category === 'POTENTIAL_CLIENT') && l.kanbanStep === 2),
+                    id: 'AGENDAMIENTO', 
+                    label: 'Agendamiento', 
+                    color: 'bg-purple-600', 
+                    leads: kanbanLeads.filter(l => l.category === 'POTENTIAL_CLIENT' && (l.subStatus === 'SIN_FECHA' || l.subStatus === 'ESPERANDO_RESPUESTA')),
                     hasFilter: true
                 },
-              ].map((column) => (
-                <div key={column.id} className="space-y-4">
-                  <div className="flex items-center justify-between px-5 py-4 bg-white rounded-[1.8rem] border border-slate-100 shadow-sm border-b-4" style={{ borderBottomColor: column.color.replace('bg-', '') }}>
+                { 
+                    id: 'EJECUCION', 
+                    label: 'Ejecución', 
+                    color: 'bg-emerald-600', 
+                    leads: kanbanLeads.filter(l => l.category === 'POTENTIAL_CLIENT' && l.subStatus === 'EN_EJECUCION'),
+                    hasFilter: true
+                },
+                { 
+                    id: 'REVISAR', 
+                    label: 'Revisar (Oculta)', 
+                    color: 'bg-orange-500', 
+                    leads: kanbanLeads.filter(l => l.category === 'REVISION'),
+                    canHide: true
+                },
+              ].map((column) => {
+                if (column.canHide && isRevisionColumnHidden) {
+                    return (
+                        <div key={column.id} onClick={() => setIsRevisionColumnHidden(false)} className="flex flex-col items-center justify-between py-6 min-w-[50px] bg-slate-100/50 rounded-[1.8rem] border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-100 transition-all snap-center h-full">
+                            <EyeOff className="h-4 w-4 text-slate-400 mb-4" />
+                            <div className="flex-1 flex items-center justify-center">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{column.label}</span>
+                            </div>
+                            <Badge variant="outline" className="text-[10px] font-black border-slate-200 mt-4 rounded-lg bg-white px-2 py-1">{column.leads.length}</Badge>
+                        </div>
+                    )
+                }
+
+                return (
+                <div key={column.id} className="space-y-4 min-w-[85vw] md:min-w-[320px] lg:min-w-[340px] snap-center shrink-0">
+                  <div className="flex items-center justify-between px-5 py-4 bg-white rounded-[1.8rem] border border-slate-100 shadow-sm border-b-4 relative" style={{ borderBottomColor: column.color.replace('bg-', '') }}>
                     <div className="flex flex-col gap-1">
                        <span className="text-[11px] font-black uppercase tracking-widest text-slate-900 leading-none">{column.label}</span>
-                       {column.hasFilter && (
-                           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Filtrado por Categoría Activa</span>
+                       {(column.id === 'AGENDAMIENTO' || column.id === 'EJECUCION') && (
+                           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Clientes Potenciales</span>
                        )}
                     </div>
-                    <Badge variant="outline" className="text-[10px] font-black border-slate-100 rounded-lg px-3">{column.leads.length}</Badge>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] font-black border-slate-100 rounded-lg px-3">{column.leads.length}</Badge>
+                        {column.canHide && (
+                            <button onClick={() => setIsRevisionColumnHidden(true)} className="p-1 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600 ml-1">
+                                <EyeOff className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
                   </div>
                   
                   <div className="space-y-3 min-h-[600px] p-2 rounded-[2rem] bg-slate-100/30 border border-dashed border-slate-200/50">
@@ -561,7 +595,10 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
                                 {lead.contactName}
                             </span>
                             {lead.category === 'POTENTIAL_CLIENT' ? (
-                                <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 text-[7px] font-black uppercase tracking-widest border-emerald-100 px-1.5 h-4">
+                                <Badge variant="secondary" className={cn("text-[7px] font-black uppercase tracking-widest border px-1.5 h-4", 
+                                    lead.subStatus === 'EN_EJECUCION' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                                    "bg-purple-50 text-purple-700 border-purple-100"
+                                )}>
                                     {lead.subStatus ? lead.subStatus.replace(/_/g, ' ') : 'SIN FECHA AÚN'}
                                 </Badge>
                             ) : (
@@ -585,7 +622,7 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
                                     Iniciar
                                 </Button>
                              )}
-                             {column.id === 'SEGUIMIENTO' && (
+                             {(column.id === 'SEGUIMIENTO' || column.id === 'REVISAR') && (
                                 <Select onValueChange={(val) => {
                                     if (val === 'REJECT') {
                                         setLeadToDiscard(lead);
@@ -594,33 +631,56 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
                                         setLeadToRevision(lead);
                                         setIsRevisionDialogOpen(true);
                                     } else if (val === 'POTENTIAL_CLIENT') {
-                                        // Trigger potential client sub-status popup logic
-                                        // Category will be updated by the dialog if it's currently NOT a PC. Wait, EditLeadDialog usually needs explicit instruction to switch it... 
-                                        // But wait, they requested it opens the popup! EditLeadDialog will handle the category change to POTENTIAL_CLIENT.
                                         setLeadToEdit(lead);
                                         setIsEditLeadOpen(true);
                                     }
                                 }}>
                                     <SelectTrigger className="w-full h-8 rounded-lg text-[9px] font-black uppercase tracking-widest border-slate-100 bg-white shadow-none">
-                                        <SelectValue placeholder="CLasificar" />
+                                        <SelectValue placeholder="Clasificar" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="REVISION">En Revisión</SelectItem>
+                                        {column.id !== 'REVISAR' && <SelectItem value="REVISION">En Revisión Externa</SelectItem>}
                                         <SelectItem value="POTENTIAL_CLIENT">Cliente Potencial</SelectItem>
                                         <SelectItem value="REJECT">Rechazar</SelectItem>
                                     </SelectContent>
                                 </Select>
                              )}
-                             {column.id === 'CLASIFICACION' && (
-                                <div className="grid grid-cols-1 gap-1.5 w-full">
-                                    <Badge variant="outline" className="h-8 justify-center rounded-lg text-[8px] font-black uppercase tracking-widest border-slate-100 text-slate-400">
-                                        Estado Finalizado
-                                    </Badge>
-                                </div>
+                             {column.id === 'AGENDAMIENTO' && (
+                                <Select onValueChange={(val) => {
+                                    if (val === 'EJECUCION' || val === 'REJECT') {
+                                        setLeadToEdit(lead);
+                                        setIsEditLeadOpen(true);
+                                    }
+                                }}>
+                                    <SelectTrigger className="w-full h-8 rounded-lg text-[9px] font-black uppercase tracking-widest border-slate-100 bg-white shadow-none text-purple-700">
+                                        <SelectValue placeholder="Acción..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="EJECUCION">Reunión Concretada (Ejecución)</SelectItem>
+                                        <SelectItem value="REJECT">Rechazar Cita</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                             )}
+                             {column.id === 'EJECUCION' && (
+                                <Select onValueChange={(val) => {
+                                    if (val === 'CLOSED_SELL' || val === 'REJECT') {
+                                        setLeadToEdit(lead);
+                                        setIsEditLeadOpen(true);
+                                    }
+                                }}>
+                                    <SelectTrigger className="w-full h-8 rounded-lg text-[9px] font-black uppercase tracking-widest border-emerald-100 bg-emerald-50 text-emerald-700 shadow-none">
+                                        <SelectValue placeholder="Finalizar..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="CLOSED_SELL">Venta Cerrada (Ganado)</SelectItem>
+                                        <SelectItem value="REJECT">Rechazado (Perdido)</SelectItem>
+                                    </SelectContent>
+                                </Select>
                              )}
                           </div>
                         </div>
                       </div>
+
                     )) : (
                       <div className="py-20 flex flex-col items-center justify-center opacity-40">
                          <Layers className="h-8 w-8 text-slate-300 mb-2" />
@@ -629,43 +689,173 @@ export function LeadsView({ leads: initialLeads, stats, onStatsUpdate }: LeadsVi
                     )}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}
 
-        {activeView === 'potenciales' && (
+        {activeView === 'clasificados' && (
           <div className="animate-in fade-in slide-in-from-right-6 duration-700 space-y-6">
-            <div className="flex items-center justify-between px-6">
-               <div className="flex items-center gap-3">
-                  <div className="bg-amber-100 p-2.5 rounded-2xl border border-amber-200">
-                      <Calendar className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <div>
-                      <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic">Mapeo de Potenciales</h3>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prospectos en espera de asignación de fecha fija</p>
-                  </div>
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 w-full">
+               {/* Brand Filters */}
+               <div className="flex p-1 bg-slate-100 rounded-[1.2rem] w-full lg:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <button 
+                      onClick={() => setActiveBrandTab('AZUR')}
+                      className={cn(
+                          "flex-1 md:flex-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                          activeBrandTab === 'AZUR' ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                  >
+                      Ver Azur
+                  </button>
+                  <button 
+                      onClick={() => setActiveBrandTab('COCINAPRO')}
+                      className={cn(
+                          "flex-1 md:flex-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                          activeBrandTab === 'COCINAPRO' ? "bg-white text-red-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                  >
+                      Ver CocinaPro
+                  </button>
+                  <button 
+                      onClick={() => setActiveBrandTab('ALL')}
+                      className={cn(
+                          "flex-1 md:flex-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                          activeBrandTab === 'ALL' ? "bg-white text-slate-800 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                  >
+                      Ver Ambos
+                  </button>
                </div>
-               <Badge className="bg-amber-500 text-white border-none px-6 py-2 rounded-full font-black text-xs tracking-widest shadow-lg shadow-amber-200">
-                  {unfilteredBrandLeads.filter(l => l.status === 'WAITING_FOR_DATE').length} PENDIENTES DE FECHA
-               </Badge>
-            </div>
-            
-            <Card className="border-slate-200 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
-               <CardContent className="p-8">
-                  <DataTable 
-                      columns={columns} 
-                      data={unfilteredBrandLeads.filter(l => l.status === 'WAITING_FOR_DATE')} 
-                      filterColumn="contactName" 
-                  />
-               </CardContent>
-            </Card>
-          </div>
-        )}
 
-        {activeView === 'rechazados' && (
-          <div className="animate-in fade-in slide-in-from-left-6 duration-700">
-             <AuditView />
+               {/* Classification Filters */}
+               <div className="flex p-1 bg-slate-100/50 rounded-[1.2rem] border border-slate-200 w-full lg:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <button 
+                      onClick={() => setActiveClasificadosTab('POTENTIAL_CLIENT')}
+                      className={cn(
+                          "flex-1 md:flex-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                          activeClasificadosTab === 'POTENTIAL_CLIENT' ? "bg-amber-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                  >
+                      Cliente Potencial
+                  </button>
+                  <button 
+                      onClick={() => setActiveClasificadosTab('REVISION')}
+                      className={cn(
+                          "flex-1 md:flex-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                          activeClasificadosTab === 'REVISION' ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                  >
+                      Revisión
+                  </button>
+                  <button 
+                      onClick={() => setActiveClasificadosTab('REJECTED')}
+                      className={cn(
+                          "flex-1 md:flex-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                          activeClasificadosTab === 'REJECTED' ? "bg-red-500 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                  >
+                      Rechazados
+                  </button>
+                  <button 
+                      onClick={() => setActiveClasificadosTab('CLOSED_SELL')}
+                      className={cn(
+                          "flex-1 md:flex-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0",
+                          activeClasificadosTab === 'CLOSED_SELL' ? "bg-slate-900 text-white shadow-sm" : "text-slate-400 hover:text-slate-600"
+                      )}
+                  >
+                      Venta Cerrada
+                  </button>
+               </div>
+            </div>
+
+            {activeClasificadosTab === 'POTENTIAL_CLIENT' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex items-center justify-between px-6">
+                       <div className="flex items-center gap-3">
+                          <div className="bg-amber-100 p-2.5 rounded-2xl border border-amber-200">
+                              <Calendar className="h-5 w-5 text-amber-600" />
+                          </div>
+                          <div>
+                              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic">Mapeo de Potenciales</h3>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prospectos con alta intención de compra</p>
+                          </div>
+                       </div>
+                       <Badge className="bg-amber-500 text-white border-none px-6 py-2 rounded-full font-black text-xs tracking-widest shadow-lg shadow-amber-200">
+                          {clasificadosLeads.filter(l => l.category === 'POTENTIAL_CLIENT').length} TOTAL POTENCIALES
+                       </Badge>
+                    </div>
+                    <Card className="border-slate-200 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
+                       <CardContent className="p-8">
+                          <DataTable 
+                              columns={columns} 
+                              data={clasificadosLeads.filter(l => l.category === 'POTENTIAL_CLIENT')} 
+                              filterColumn="contactName" 
+                          />
+                       </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {activeClasificadosTab === 'REVISION' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex items-center justify-between px-6">
+                       <div className="flex items-center gap-3">
+                          <div className="bg-emerald-100 p-2.5 rounded-2xl border border-emerald-200">
+                              <Eye className="h-5 w-5 text-emerald-600" />
+                          </div>
+                          <div>
+                              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic">En Revisión</h3>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prospectos en proceso interno de evaluación</p>
+                          </div>
+                       </div>
+                       <Badge className="bg-emerald-500 text-white border-none px-6 py-2 rounded-full font-black text-xs tracking-widest shadow-lg shadow-emerald-200">
+                          {clasificadosLeads.filter(l => l.category === 'REVISION').length} EN REVISIÓN
+                       </Badge>
+                    </div>
+                    <Card className="border-slate-200 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
+                       <CardContent className="p-8">
+                          <DataTable 
+                              columns={columns} 
+                              data={clasificadosLeads.filter(l => l.category === 'REVISION')} 
+                              filterColumn="contactName" 
+                          />
+                       </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {activeClasificadosTab === 'CLOSED_SELL' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex items-center justify-between px-6">
+                       <div className="flex items-center gap-3">
+                          <div className="bg-slate-100 p-2.5 rounded-2xl border border-slate-200">
+                              <CheckCircle2 className="h-5 w-5 text-slate-900" />
+                          </div>
+                          <div>
+                              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic">Ventas Cerradas</h3>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prospectos convertidos en transacciones cerradas</p>
+                          </div>
+                       </div>
+                       <Badge className="bg-slate-900 text-white border-none px-6 py-2 rounded-full font-black text-xs tracking-widest shadow-lg shadow-slate-200">
+                          {clasificadosLeads.filter(l => l.category === 'CLOSED_SELL').length} VENTAS CERRADAS
+                       </Badge>
+                    </div>
+                    <Card className="border-slate-200 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
+                       <CardContent className="p-8">
+                          <DataTable 
+                              columns={columns} 
+                              data={clasificadosLeads.filter(l => l.category === 'CLOSED_SELL')} 
+                              filterColumn="contactName" 
+                          />
+                       </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {activeClasificadosTab === 'REJECTED' && (
+                <AuditView />
+            )}
           </div>
         )}
 

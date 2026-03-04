@@ -27,20 +27,24 @@ export function AuditView() {
   }, [])
 
   return (
-    <div className="space-y-6">
-      <Card className="border-slate-200 shadow-sm rounded-[2rem] overflow-hidden bg-white">
-        <CardHeader className="pb-4 border-b border-slate-50 bg-slate-50/50">
-          <div className="flex items-center gap-3">
-             <div className="bg-amber-500 p-2 rounded-xl">
-                <History className="h-5 w-5 text-white" />
-             </div>
-             <div>
-                <CardTitle className="text-lg font-black uppercase tracking-tight">Mapping Histórico (Buscador Maestro)</CardTitle>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Busca leads descartados por ID de Kommo para defender tu gestión</p>
-             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+      <div className="flex items-center justify-between px-6">
+         <div className="flex items-center gap-3">
+            <div className="bg-red-100 p-2.5 rounded-2xl border border-red-200">
+                <History className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter italic">Mapping Histórico</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Busca leads descartados por ID de Kommo para defender tu gestión</p>
+            </div>
+         </div>
+         <Badge className="bg-red-500 text-white border-none px-6 py-2 rounded-full font-black text-xs tracking-widest shadow-lg shadow-red-200">
+            BASE HISTÓRICA
+         </Badge>
+      </div>
+
+      <Card className="border-slate-200 shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
+        <CardContent className="p-8 space-y-6">
           <div className="flex flex-col sm:flex-row gap-2 max-w-2xl">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />

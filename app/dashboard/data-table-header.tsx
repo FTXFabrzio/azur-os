@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, EyeOff, Filter } from "lucide-react
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,8 +39,34 @@ const mapLabel = (val: string) => {
   if (val === 'NO_RESPONSE') return 'Sin Respuesta'
   if (val === 'NOT_INTERESTED') return 'No Interesado'
   if (val === 'CONFUSED') return 'Confundido'
+  if (val === 'REVISION') return 'Revisión'
+  if (val === 'REJECTED') return 'Rechazado'
 
   return val.replace(/_/g, ' ')
+}
+
+const getBadgeClasses = (val: string) => {
+  switch (val) {
+    case 'POTENTIAL_CLIENT': return "bg-blue-50 text-blue-600 border-blue-100"
+    case 'SERVICE_OFFER': return "bg-orange-50 text-orange-600 border-orange-100"
+    case 'JOB_CANDIDATE': return "bg-purple-50 text-purple-600 border-purple-100"
+    case 'CONFUSED': return "bg-red-50 text-red-600 border-red-100"
+    case 'NO_RESPONSE': return "bg-slate-50 text-slate-500 border-slate-100"
+    case 'MANUAL_FOLLOW_UP': return "bg-amber-50 text-amber-600 border-amber-200"
+    case 'LEAD_ALL': return "bg-cyan-50 text-cyan-600 border-cyan-100"
+    case 'LEAD_LIBRE': return "bg-cyan-50 text-cyan-600 border-cyan-100"
+    case 'REVISION': return "bg-emerald-50 text-emerald-600 border-emerald-100"
+    
+    case 'WAITING_FOR_DATE': return "bg-amber-50 text-amber-600 border-amber-200"
+    case 'ON_HOLD': return "bg-orange-50 text-orange-600 border-orange-200"
+    case 'IN_EXECUTION': return "bg-emerald-50 text-emerald-600 border-emerald-200"
+    case 'PENDING': return "bg-slate-50 text-slate-600 border-slate-100"
+    case 'SCHEDULED': return "bg-emerald-50 text-emerald-600 border-emerald-100"
+    case 'ARCHIVED': return "bg-red-50 text-red-600 border-red-100"
+    case 'REJECTED': return "bg-red-50 text-red-600 border-red-100"
+    
+    default: return ""
+  }
 }
 
 export function DataTableColumnHeader<TData, TValue>({
@@ -107,12 +134,23 @@ export function DataTableColumnHeader<TData, TValue>({
                         else column.setFilterValue(val)
                     }}
                 >
-                    <DropdownMenuRadioItem value="ALL" className="text-xs">Todos</DropdownMenuRadioItem>
-                    {uniqueValues.map((val: any) => (
-                        <DropdownMenuRadioItem key={val} value={val} className="text-xs">
-                          {typeof val === 'string' ? mapLabel(val) : String(val)}
-                        </DropdownMenuRadioItem>
-                    ))}
+                    <DropdownMenuRadioItem value="ALL" className="text-xs font-bold text-slate-600 py-2">
+                        Todos
+                    </DropdownMenuRadioItem>
+                    {uniqueValues.map((val: any) => {
+                        const badgeClasses = typeof val === 'string' ? getBadgeClasses(val) : "";
+                        return (
+                            <DropdownMenuRadioItem key={val} value={val} className="text-xs my-0.5 py-1.5 group cursor-pointer">
+                                {badgeClasses ? (
+                                    <Badge variant="outline" className={cn("px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest shadow-none pointer-events-none rounded-full border", badgeClasses)}>
+                                        {mapLabel(val)}
+                                    </Badge>
+                                ) : (
+                                    <span className="font-semibold text-slate-700">{typeof val === 'string' ? mapLabel(val) : String(val)}</span>
+                                )}
+                            </DropdownMenuRadioItem>
+                        )
+                    })}
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
             </>
